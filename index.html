@@ -11,7 +11,10 @@
 </head>
 <body>
     <main id="loading-screen">
-        <video id="intro-video" playsinline preload="none"></video>
+        <div id="intro-stage">
+            <video id="intro-backdrop" muted playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
+            <video id="intro-video" playsinline preload="none"></video>
+        </div>
         <img id="loading-image" alt="">
     </main>
 
