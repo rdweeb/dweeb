@@ -8,6 +8,7 @@ const audioIcon = document.getElementById("audio-icon");
 
 let muted = false;
 let currentAudio = null;
+let currentTrack = 0;
 
 const audioFiles = [];
 
@@ -25,28 +26,44 @@ async function fileExists(filename) {
         });
 
         return response.ok;
+
     } catch {
         return false;
     }
 }
 
 async function findMusicFiles() {
-    let number = 1;
 
-    while (true) {
+    const checks = [];
+
+    for (let number = 1; number <= 100; number++) {
+
         const filename = `music${number}.mp3`;
-        const exists = await fileExists(filename);
 
-        if (!exists) {
-            break;
-        }
-
-        audioFiles.push(filename);
-        number++;
+        checks.push(
+            fileExists(filename).then(exists => {
+                if (exists) {
+                    audioFiles.push({
+                        number: number,
+                        filename: filename
+                    });
+                }
+            })
+        );
     }
+
+    await Promise.all(checks);
+
+    audioFiles.sort((a, b) => a.number - b.number);
+
+    console.log(
+        "Music files found:",
+        audioFiles.map(track => track.filename)
+    );
 }
 
 function playAudio(filename) {
+
     if (currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
@@ -61,87 +78,100 @@ function playAudio(filename) {
 
     currentAudio.addEventListener("ended", playNextMusic);
 
-    currentAudio.play().catch(() => {});
+    currentAudio.play().catch(() => {
+
+    });
 }
 
-let currentTrack = 0;
-
 function playNextMusic() {
+
     if (audioFiles.length === 0) {
         return;
     }
-
     currentTrack++;
 
     if (currentTrack >= audioFiles.length) {
         currentTrack = 0;
     }
-
-    playAudio(audioFiles[currentTrack]);
+    playAudio(audioFiles[currentTrack].filename);
 }
 
 function startMusic() {
+
     if (audioFiles.length === 0) {
+        console.log("No music files found. Continuing without music.");
         return;
     }
-
     currentTrack = 0;
-    playAudio(audioFiles[currentTrack]);
+    playAudio(audioFiles[currentTrack].filename);
 }
 
 async function showLoadingImage(imageNumber) {
     return new Promise(resolve => {
         const imageName = `loading${imageNumber}.png`;
         const audioName = `loading${imageNumber}.mp3`;
-
         loadingImage.src = imageName;
-
         loadingImage.onload = () => {
             loadingImage.classList.add("visible");
-
             const sound = new Audio(audioName);
-
             sound.muted = muted;
             sound.volume = 1;
-
             sound.play().catch(() => {});
-
             sound.addEventListener("ended", async () => {
                 loadingImage.classList.remove("visible");
-
                 await wait(700);
-
                 resolve();
+            }, {
+                once: true
             });
         };
 
-        loadingImage.onerror = () => {
+        loadingImage.onerror = async () => {
+            console.warn(
+                `${imageName} was not found. Skipping it.`
+            );
+            await wait(300);
             resolve();
         };
+
     });
 }
 
 async function playIntroVideo() {
+
     return new Promise(resolve => {
+
         video.classList.add("visible");
 
         video.muted = muted;
 
-        video.play().catch(() => {});
+        video.play().catch(error => {
+
+            console.warn(
+                "Video autoplay was blocked:",
+                error
+            );
+
+            setTimeout(resolve, 1000);
+        });
 
         video.addEventListener("ended", async () => {
+
             video.classList.remove("visible");
 
             await wait(700);
 
             resolve();
+
         }, {
             once: true
         });
+
     });
 }
 
 async function finishIntro() {
+
     loadingScreen.classList.add("hidden");
 
     await wait(1200);
@@ -154,32 +184,32 @@ async function finishIntro() {
 }
 
 function updateAudioIcon() {
+
     if (muted) {
         audioIcon.src = "audio1.png";
     } else {
         audioIcon.src = "audio.png";
     }
 }
-
 audioToggle.addEventListener("click", () => {
+
     muted = !muted;
 
     updateAudioIcon();
 
     if (currentAudio) {
         currentAudio.muted = muted;
+
+        if (!muted) {
+            currentAudio.play().catch(() => {});
+        }
     }
 
     video.muted = muted;
 });
 
-audioToggle.addEventListener("click", () => {
-    if (!muted && currentAudio) {
-        currentAudio.play().catch(() => {});
-    }
-});
-
 async function startSite() {
+
     const musicSearch = findMusicFiles();
 
     await playIntroVideo();
