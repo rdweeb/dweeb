@@ -14,16 +14,22 @@
 
     const CONFIG = {
         video: "dweeb.mp4",
-        steps: [
+        cards: [
             { image: "loading1.png", audio: "loading1.mp3" },
-            { image: "loading2.png", audio: "loading2.mp3" }
+            { image: "loading2.png", hold: 3000 }
         ],
         musicFile: n => `music${n}.mp3`,
         musicMax: 50,
-        imageOnlyMs: 3000,
         gapMs: 500,
         imageFadeMs: 700,
-        screenFadeMs: 1200
+        screenFadeMs: 1200,
+        beat: {
+            lowBin: 1,
+            highBin: 4,
+            sensitivity: 5,
+            decay: 0.88,
+            maxScale: 0.03
+        }
     };
 
     const SILENCE =
@@ -35,6 +41,7 @@
     const loadingImage = $("loading-image");
     const loadingScreen = $("loading-screen");
     const messageScreen = $("message-screen");
+    const heading = messageScreen.querySelector("h1");
     const gate = $("gate");
     const enterButton = $("enter");
     const progressBar = $("progress-bar");
@@ -47,12 +54,11 @@
 
     let muted = false;
     let musicStarted = false;
+    let audioContext = null;
+    let analyser = null;
+    let spectrum = null;
 
-    const assets = {
-        video: null,
-        steps: [],
-        tracks: []
-    };
+    const assets = { video: null, cards: [], tracks: [] };
 
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -108,48 +114,42 @@
         }
     }
 
-    function createProgress(jobs) {
-        const state = jobs.map(() => 0);
-        const weights = jobs.map(job => job.weight);
+    function createProgress(weights) {
+        const state = weights.map(() => 0);
         const totalWeight = weights.reduce((a, b) => a + b, 0);
 
-        const update = () => {
+        const render = () => {
             const done = state.reduce((sum, v, i) => sum + v * weights[i], 0);
             const fraction = totalWeight ? done / totalWeight : 1;
             progressBar.style.transform = `scaleX(${fraction})`;
             enterButton.textContent = `Loading ${Math.floor(fraction * 100)}%`;
         };
 
-        return {
-            report: index => value => {
-                state[index] = value;
-                update();
-            }
+        return index => value => {
+            state[index] = value;
+            render();
         };
     }
 
     async function preload() {
-        const musicFiles = await findMusic();
+        const music = await findMusic();
 
-        const jobs = [
-            { key: "video", url: CONFIG.video, weight: 6 }
-        ];
+        const jobs = [{ key: "video", url: CONFIG.video, weight: 6 }];
 
-        CONFIG.steps.forEach((step, i) => {
-            jobs.push({ key: `image${i}`, url: step.image, weight: 1 });
-            jobs.push({ key: `audio${i}`, url: step.audio, weight: 2 });
+        CONFIG.cards.forEach((card, i) => {
+            jobs.push({ key: `image${i}`, url: card.image, weight: 1 });
+            if (card.audio) jobs.push({ key: `audio${i}`, url: card.audio, weight: 2 });
         });
 
-        if (musicFiles.length) {
-            jobs.push({ key: "music", url: musicFiles[0], weight: 2 });
-        }
+        if (music.length) jobs.push({ key: "music", url: music[0], weight: 2 });
 
-        const progress = createProgress(jobs);
+        const reporter = createProgress(jobs.map(job => job.weight));
 
         const results = await Promise.all(
             jobs.map(async (job, i) => {
-                const result = await download(job.url, progress.report(i));
-                progress.report(i)(1);
+                const report = reporter(i);
+                const result = await download(job.url, report);
+                report(1);
                 return [job.key, result];
             })
         );
@@ -157,13 +157,12 @@
         const byKey = Object.fromEntries(results);
 
         assets.video = byKey.video;
-        assets.steps = CONFIG.steps.map((_, i) => ({
+        assets.cards = CONFIG.cards.map((card, i) => ({
             image: byKey[`image${i}`],
-            audio: byKey[`audio${i}`]
+            audio: card.audio ? byKey[`audio${i}`] : null,
+            hold: card.hold || 3000
         }));
-        assets.tracks = musicFiles.map((file, i) =>
-            i === 0 && byKey.music ? byKey.music : file
-        );
+        assets.tracks = music.map((file, i) => (i === 0 && byKey.music ? byKey.music : file));
     }
 
     function setMuted(value) {
@@ -175,11 +174,56 @@
         audioToggle.setAttribute("aria-label", muted ? "Unmute audio" : "Mute audio");
     }
 
-    function unlockAudio() {
+    function prepareAudio() {
+        const Context = window.AudioContext || window.webkitAudioContext;
+
+        if (Context) {
+            try {
+                audioContext = new Context();
+                const source = audioContext.createMediaElementSource(bgm);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 1024;
+                analyser.smoothingTimeConstant = 0.55;
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+                spectrum = new Uint8Array(analyser.frequencyBinCount);
+                audioContext.resume();
+            } catch {
+                analyser = null;
+            }
+        }
+
         for (const el of [voice, bgm]) {
             el.src = SILENCE;
             el.play().then(() => el.pause()).catch(() => {});
         }
+    }
+
+    function startPulse() {
+        if (!analyser) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+        const { lowBin, highBin, sensitivity, decay, maxScale } = CONFIG.beat;
+        let baseline = 0;
+        let level = 0;
+
+        const frame = () => {
+            analyser.getByteFrequencyData(spectrum);
+
+            let sum = 0;
+            for (let i = lowBin; i <= highBin; i++) sum += spectrum[i];
+            const energy = sum / (highBin - lowBin + 1) / 255;
+
+            baseline += (energy - baseline) * 0.05;
+
+            const hit = Math.min(Math.max((energy - baseline * 1.05) * sensitivity, 0), 1);
+            level = Math.max(hit, level * decay);
+
+            heading.style.transform = `scale(${1 + level * maxScale})`;
+            requestAnimationFrame(frame);
+        };
+
+        requestAnimationFrame(frame);
     }
 
     function playToEnd(el, src) {
@@ -205,50 +249,49 @@
         });
     }
 
-    async function playIntroVideo() {
-        if (!assets.video) return;
+    function playIntro() {
+        if (!assets.video) return Promise.resolve();
 
-        video.src = assets.video;
-        video.muted = muted;
-
-        const started = video.play();
-
-        try {
-            await started;
-        } catch {
-            return;
-        }
-
-        video.classList.add("visible");
-
-        await new Promise(resolve => {
-            video.onended = video.onerror = () => {
+        return new Promise(resolve => {
+            const done = () => {
                 video.onended = video.onerror = null;
                 resolve();
             };
+
+            video.onended = done;
+            video.onerror = done;
+            video.src = assets.video;
+            video.muted = muted;
+            video.play().then(() => video.classList.add("visible")).catch(done);
         });
     }
 
-    async function playStep(step) {
-        if (!step.image) return;
+    async function playCards() {
+        let shown = false;
 
-        loadingImage.src = step.image;
-        try {
-            await loadingImage.decode();
-        } catch {
-            return;
+        for (const card of assets.cards) {
+            if (!card.image) continue;
+
+            loadingImage.src = card.image;
+            try {
+                await loadingImage.decode();
+            } catch {
+                continue;
+            }
+
+            loadingImage.classList.toggle("cut", shown);
+            loadingImage.classList.add("visible");
+            shown = true;
+
+            if (card.audio) {
+                await playToEnd(voice, card.audio);
+            } else {
+                await wait(card.hold);
+            }
         }
 
-        loadingImage.classList.add("visible");
-
-        if (step.audio) {
-            await playToEnd(voice, step.audio);
-        } else {
-            await wait(CONFIG.imageOnlyMs);
-        }
-
-        loadingImage.classList.remove("visible");
-        await wait(CONFIG.imageFadeMs + CONFIG.gapMs);
+        loadingImage.classList.remove("cut", "visible");
+        await wait(CONFIG.imageFadeMs);
     }
 
     function playMusic(index = 0, failures = 0) {
@@ -260,25 +303,24 @@
         bgm.muted = muted;
         bgm.src = tracks[index];
 
-        const next = () => playMusic((index + 1) % tracks.length, 0);
-        bgm.onended = next;
-        bgm.onerror = () => playMusic((index + 1) % tracks.length, failures + 1);
+        const next = (offset, count) => () => playMusic((index + offset) % tracks.length, count);
+        bgm.onended = next(1, 0);
+        bgm.onerror = next(1, failures + 1);
 
         bgm.play().catch(() => {});
     }
 
     async function run() {
-        unlockAudio();
-        const intro = playIntroVideo();
+        prepareAudio();
+
+        const intro = playIntro();
         gate.classList.add("leaving");
 
         await intro;
         video.classList.remove("visible");
         await wait(CONFIG.gapMs);
 
-        for (const step of assets.steps) {
-            await playStep(step);
-        }
+        await playCards();
 
         loadingScreen.classList.add("hidden");
         await wait(CONFIG.screenFadeMs);
@@ -286,6 +328,7 @@
         document.title = "Under construction";
         messageScreen.classList.add("visible");
         playMusic();
+        startPulse();
     }
 
     audioToggle.addEventListener("click", () => {
