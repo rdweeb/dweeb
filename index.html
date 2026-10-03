@@ -3,27 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>rdweeb.xyz</title>
-    <style>
-        body {
-            font-family: system-ui, sans-serif;
-            background-color: #0f0f11;
-            color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
-        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-        p { color: #888; font-size: 1.2rem; }
-    </style>
+    <title>Loading...</title>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div>
-        <h1>SITE IS STILL BEING WORKED ON</h1>
-        <p>Check back soon!</p>
-    </div>
+    <main id="loading-screen">
+
+        <video id="intro-video" playsinline preload="auto">
+            <source src="dweeb.mp4" type="video/mp4">
+        </video>
+
+        <img id="loading-image" src="" alt="">
+
+        <div id="loading-text"></div>
+
+    </main>
+    <section id="message-screen">
+        <h1>
+            THE SITE IS STILL BEING WORKED ON,<br>
+            CHECK BACK LATER.
+        </h1>
+    </section>
+    <button id="audio-toggle" aria-label="Toggle audio">
+        <img id="audio-icon" src="audio.png" alt="Audio">
+    </button>
+    <script src="script.js"></script>
 </body>
 </html>
