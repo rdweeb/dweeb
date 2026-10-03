@@ -1,446 +1,310 @@
-const video = document.getElementById("intro-video");
-const loadingImage = document.getElementById("loading-image");
-const loadingScreen = document.getElementById("loading-screen");
-const messageScreen = document.getElementById("message-screen");
-
-const audioToggle = document.getElementById("audio-toggle");
-const audioIcon = document.getElementById("audio-icon");
-
-const MUSIC_SEARCH_LIMIT = 100;
-
-const FALLBACK_IMAGE_TIME = 3000;
-
-const BETWEEN_ELEMENTS = 500;
-
-let muted = false;
-
-let backgroundAudio = null;
-
-let musicTracks = [];
-
-let currentMusicIndex = 0;
-
-function wait(milliseconds) {
-    return new Promise(resolve => {
-        setTimeout(resolve, milliseconds);
-    });
-}
-
-async function fileExists(filename) {
-
-    try {
-
-        const response = await fetch(
-            filename,
-            {
-                method: "HEAD",
-                cache: "no-store"
-            }
-        );
-
-        return response.ok;
-
-    } catch {
-
-        return false;
-    }
-}
-
-async function findMusicTracks() {
-
-    const results = [];
-
-    const checks = [];
-
-    for (
-        let number = 1;
-        number <= MUSIC_SEARCH_LIMIT;
-        number++
-    ) {
-
-        const filename = `music${number}.mp3`;
-
-        checks.push(
-
-            fileExists(filename).then(exists => {
-
-                if (exists) {
-
-                    results.push({
-                        number: number,
-                        filename: filename
-                    });
-
-                }
-
-            })
-
-        );
-    }
-
-
-    await Promise.all(checks);
-
-    results.sort(
-        (a, b) => a.number - b.number
-    );
-
-
-    musicTracks = results;
-
-
-    console.log(
-        "Music found:",
-        musicTracks.map(track => track.filename)
-    );
-}
-
-function preloadImage(filename) {
-
-    return new Promise(resolve => {
-
-        const image = new Image();
-
-        image.onload = () => {
-            resolve(true);
-        };
-
-        image.onerror = () => {
-            console.warn(
-                `Could not load ${filename}`
-            );
-
-            resolve(false);
-        };
-
-        image.src = filename;
-
-    });
-}
-
-
-function preloadAudio(filename) {
-
-    return new Promise(resolve => {
-
-        const audio = new Audio();
-
-        audio.preload = "auto";
-
-        audio.addEventListener(
-            "canplaythrough",
-            () => resolve(true),
-            { once: true }
-        );
-
-        audio.addEventListener(
-            "error",
-            () => resolve(false),
-            { once: true }
-        );
-
-        audio.src = filename;
-
-        audio.load();
-
-    });
-}
-
-async function preloadIntroAssets() {
-
-    await Promise.all([
-
-        preloadImage("loading1.png"),
-
-        preloadImage("loading2.png"),
-
-        preloadAudio("loading1.mp3"),
-
-        preloadAudio("loading2.mp3")
-
-    ]);
-
-}
-
-async function playIntroVideo() {
-
-    video.classList.add("visible");
-
-    video.muted = muted;
-
-    try {
-
-        await video.play();
-
-    } catch (error) {
-
-        console.warn(
-            "Video autoplay was blocked.",
-            error
-        );
-
-        await wait(2000);
-
-        video.classList.remove("visible");
-
-        return;
-    }
-
-    await new Promise(resolve => {
-
-        video.addEventListener(
-            "ended",
-            resolve,
-            { once: true }
-        );
-
-    });
-
-    video.classList.remove("visible");
-
-    await wait(BETWEEN_ELEMENTS);
-}
-
-async function playLoadingElement(number) {
-
-    const imageFilename =
-        `loading${number}.png`;
-
-    const audioFilename =
-        `loading${number}.mp3`;
-
-    const imageAvailable =
-        await fileExists(imageFilename);
-
-    if (!imageAvailable) {
-
-        console.warn(
-            `${imageFilename} not found. Skipping.`
-        );
-
-        return;
-    }
-
-    loadingImage.src = imageFilename;
-
-    loadingImage.classList.add("visible");
-
-    const audioAvailable =
-        await fileExists(audioFilename);
-
-    if (!audioAvailable) {
-
-        await wait(FALLBACK_IMAGE_TIME);
-
-        loadingImage.classList.remove("visible");
-
-        await wait(BETWEEN_ELEMENTS);
-
-        return;
-    }
-
-    const sound =
-        new Audio(audioFilename);
-
-    sound.preload = "auto";
-    sound.muted = muted;
-
-    await new Promise(resolve => {
-
-        let finished = false;
-
-
-        function finish() {
-
-            if (finished) {
-                return;
-            }
-
-            finished = true;
-
-            resolve();
+"use strict";
+
+(() => {
+    if (window.top !== window.self) {
+        try {
+            window.top.location.replace(window.location.href);
+        } catch {
+            document.documentElement.textContent = "";
         }
+        return;
+    }
 
+    document.documentElement.classList.remove("no-js");
 
-        sound.addEventListener(
-            "ended",
-            finish,
-            { once: true }
-        );
+    const CONFIG = {
+        video: "dweeb.mp4",
+        steps: [
+            { image: "loading1.png", audio: "loading1.mp3" },
+            { image: "loading2.png", audio: "loading2.mp3" }
+        ],
+        musicFile: n => `music${n}.mp3`,
+        musicMax: 50,
+        imageOnlyMs: 3000,
+        gapMs: 500,
+        imageFadeMs: 700,
+        screenFadeMs: 1200
+    };
 
+    const SILENCE =
+        "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
 
-        sound.addEventListener(
-            "error",
-            finish,
-            { once: true }
-        );
+    const $ = id => document.getElementById(id);
 
+    const video = $("intro-video");
+    const loadingImage = $("loading-image");
+    const loadingScreen = $("loading-screen");
+    const messageScreen = $("message-screen");
+    const gate = $("gate");
+    const enterButton = $("enter");
+    const progressBar = $("progress-bar");
+    const audioToggle = $("audio-toggle");
+    const audioIcon = $("audio-icon");
 
-        const safetyTimer =
-            setTimeout(() => {
+    const voice = new Audio();
+    const bgm = new Audio();
+    voice.preload = bgm.preload = "auto";
 
-                sound.pause();
+    let muted = false;
+    let musicStarted = false;
 
-                finish();
+    const assets = {
+        video: null,
+        steps: [],
+        tracks: []
+    };
 
-            }, 15000);
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+    async function exists(url) {
+        try {
+            const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+            return res.ok;
+        } catch {
+            return false;
+        }
+    }
 
-        sound.play().catch(() => {
+    async function findMusic() {
+        const found = [];
+        for (let n = 1; n <= CONFIG.musicMax; n++) {
+            const file = CONFIG.musicFile(n);
+            if (!(await exists(file))) break;
+            found.push(file);
+        }
+        return found;
+    }
 
-            clearTimeout(safetyTimer);
+    async function download(url, onProgress) {
+        try {
+            const res = await fetch(url, { cache: "force-cache" });
+            if (!res.ok) return null;
 
-            finish();
+            const total = Number(res.headers.get("content-length")) || 0;
+            const type = res.headers.get("content-type") || "";
 
+            if (!res.body) {
+                const blob = await res.blob();
+                onProgress(1);
+                return URL.createObjectURL(blob);
+            }
+
+            const reader = res.body.getReader();
+            const chunks = [];
+            let loaded = 0;
+
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                loaded += value.length;
+                if (total) onProgress(Math.min(loaded / total, 0.99));
+            }
+
+            onProgress(1);
+            return URL.createObjectURL(new Blob(chunks, { type }));
+        } catch {
+            return null;
+        }
+    }
+
+    function createProgress(jobs) {
+        const state = jobs.map(() => 0);
+        const weights = jobs.map(job => job.weight);
+        const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+        const update = () => {
+            const done = state.reduce((sum, v, i) => sum + v * weights[i], 0);
+            const fraction = totalWeight ? done / totalWeight : 1;
+            progressBar.style.transform = `scaleX(${fraction})`;
+            enterButton.textContent = `Loading ${Math.floor(fraction * 100)}%`;
+        };
+
+        return {
+            report: index => value => {
+                state[index] = value;
+                update();
+            }
+        };
+    }
+
+    async function preload() {
+        const musicFiles = await findMusic();
+
+        const jobs = [
+            { key: "video", url: CONFIG.video, weight: 6 }
+        ];
+
+        CONFIG.steps.forEach((step, i) => {
+            jobs.push({ key: `image${i}`, url: step.image, weight: 1 });
+            jobs.push({ key: `audio${i}`, url: step.audio, weight: 2 });
         });
 
-    });
-
-    loadingImage.classList.remove("visible");
-
-    await wait(BETWEEN_ELEMENTS);
-}
-
-async function showFinalMessage() {
-
-    loadingScreen.classList.add("hidden");
-
-    await wait(1200);
-
-    messageScreen.classList.add("visible");
-
-    await wait(2500);
-}
-
-function playCurrentMusic() {
-
-    if (musicTracks.length === 0) {
-
-        console.log(
-            "No background music found."
-        );
-
-        return;
-    }
-
-    if (backgroundAudio) {
-
-        backgroundAudio.pause();
-
-        backgroundAudio.currentTime = 0;
-    }
-
-    backgroundAudio =
-        new Audio(
-            musicTracks[currentMusicIndex].filename
-        );
-
-
-    backgroundAudio.preload = "auto";
-    backgroundAudio.volume = 1;
-    backgroundAudio.muted = muted;
-
-    backgroundAudio.addEventListener(
-        "ended",
-        () => {
-
-            currentMusicIndex++;
-
-            if (
-                currentMusicIndex >=
-                musicTracks.length
-            ) {
-
-                currentMusicIndex = 0;
-            }
-
-
-            playCurrentMusic();
-
-        }
-    );
-
-    backgroundAudio.play().catch(() => {
-
-        console.warn(
-            "Background music autoplay was blocked."
-        );
-
-    });
-
-}
-
-function updateAudioButton() {
-
-    if (muted) {
-
-        audioIcon.src = "audio1.png";
-
-    } else {
-
-        audioIcon.src = "audio.png";
-
-    }
-}
-
-
-audioToggle.addEventListener(
-    "click",
-    () => {
-
-        muted = !muted;
-
-        updateAudioButton();
-
-        if (backgroundAudio) {
-
-            backgroundAudio.muted =
-                muted;
-
-            if (!muted) {
-
-                backgroundAudio
-                    .play()
-                    .catch(() => {});
-
-            }
-
+        if (musicFiles.length) {
+            jobs.push({ key: "music", url: musicFiles[0], weight: 2 });
         }
 
+        const progress = createProgress(jobs);
+
+        const results = await Promise.all(
+            jobs.map(async (job, i) => {
+                const result = await download(job.url, progress.report(i));
+                progress.report(i)(1);
+                return [job.key, result];
+            })
+        );
+
+        const byKey = Object.fromEntries(results);
+
+        assets.video = byKey.video;
+        assets.steps = CONFIG.steps.map((_, i) => ({
+            image: byKey[`image${i}`],
+            audio: byKey[`audio${i}`]
+        }));
+        assets.tracks = musicFiles.map((file, i) =>
+            i === 0 && byKey.music ? byKey.music : file
+        );
+    }
+
+    function setMuted(value) {
+        muted = value;
+        video.muted = voice.muted = bgm.muted = muted;
+
+        audioIcon.src = muted ? "audio1.png" : "audio.png";
+        audioToggle.setAttribute("aria-pressed", String(muted));
+        audioToggle.setAttribute("aria-label", muted ? "Unmute audio" : "Mute audio");
+    }
+
+    function unlockAudio() {
+        for (const el of [voice, bgm]) {
+            el.src = SILENCE;
+            el.play().then(() => el.pause()).catch(() => {});
+        }
+    }
+
+    function playToEnd(el, src) {
+        return new Promise(resolve => {
+            let timer = null;
+
+            const finish = () => {
+                clearTimeout(timer);
+                el.onended = el.onerror = el.onloadedmetadata = null;
+                resolve();
+            };
+
+            el.onended = finish;
+            el.onerror = finish;
+            el.onloadedmetadata = () => {
+                const length = Number.isFinite(el.duration) ? el.duration * 1000 : 60000;
+                timer = setTimeout(finish, length + 3000);
+            };
+
+            el.src = src;
+            el.muted = muted;
+            el.play().catch(finish);
+        });
+    }
+
+    async function playIntroVideo() {
+        if (!assets.video) return;
+
+        video.src = assets.video;
         video.muted = muted;
 
+        const started = video.play();
+
+        try {
+            await started;
+        } catch {
+            return;
+        }
+
+        video.classList.add("visible");
+
+        await new Promise(resolve => {
+            video.onended = video.onerror = () => {
+                video.onended = video.onerror = null;
+                resolve();
+            };
+        });
     }
-);
 
-async function startSite() {
+    async function playStep(step) {
+        if (!step.image) return;
 
-    console.log(
-        "Starting site..."
-    );
+        loadingImage.src = step.image;
+        try {
+            await loadingImage.decode();
+        } catch {
+            return;
+        }
 
-    const musicSearch =
-        findMusicTracks();
+        loadingImage.classList.add("visible");
 
-    await preloadIntroAssets();
+        if (step.audio) {
+            await playToEnd(voice, step.audio);
+        } else {
+            await wait(CONFIG.imageOnlyMs);
+        }
 
-    await playIntroVideo();
+        loadingImage.classList.remove("visible");
+        await wait(CONFIG.imageFadeMs + CONFIG.gapMs);
+    }
 
-    await playLoadingElement(1);
+    function playMusic(index = 0, failures = 0) {
+        const tracks = assets.tracks;
+        if (!tracks.length || failures >= tracks.length) return;
 
-    await playLoadingElement(2);
+        musicStarted = true;
+        bgm.loop = tracks.length === 1;
+        bgm.muted = muted;
+        bgm.src = tracks[index];
 
-    await musicSearch;
+        const next = () => playMusic((index + 1) % tracks.length, 0);
+        bgm.onended = next;
+        bgm.onerror = () => playMusic((index + 1) % tracks.length, failures + 1);
 
-    await showFinalMessage();
+        bgm.play().catch(() => {});
+    }
 
-    playCurrentMusic();
+    async function run() {
+        unlockAudio();
+        const intro = playIntroVideo();
+        gate.classList.add("leaving");
 
+        await intro;
+        video.classList.remove("visible");
+        await wait(CONFIG.gapMs);
 
-    console.log(
-        "Site ready."
-    );
-}
+        for (const step of assets.steps) {
+            await playStep(step);
+        }
 
-updateAudioButton();
+        loadingScreen.classList.add("hidden");
+        await wait(CONFIG.screenFadeMs);
 
-startSite();
+        document.title = "Under construction";
+        messageScreen.classList.add("visible");
+        playMusic();
+    }
+
+    audioToggle.addEventListener("click", () => {
+        setMuted(!muted);
+        if (!muted && musicStarted && bgm.paused) bgm.play().catch(() => {});
+    });
+
+    enterButton.addEventListener("click", run, { once: true });
+
+    async function boot() {
+        setMuted(false);
+        await preload();
+
+        progressBar.style.transform = "scaleX(1)";
+        enterButton.textContent = "Enter";
+        enterButton.disabled = false;
+        gate.classList.add("ready");
+        enterButton.focus({ preventScroll: true });
+    }
+
+    boot();
+})();
