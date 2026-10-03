@@ -24,20 +24,46 @@
         imageFadeMs: 700,
         screenFadeMs: 1200,
         beat: {
-            lowBin: 1,
-            highBin: 4,
-            sensitivity: 5,
-            decay: 0.88,
-            maxScale: 0.03
+            kick: { from: 30, to: 150, floor: 2, range: 6, release: 0.16 },
+            snare: { from: 180, to: 2500, floor: 2, range: 6, release: 0.12 },
+            hat: { from: 4000, to: 12000, floor: 2, range: 7, release: 0.08 },
+            trackMemory: 1.2,
+            kickScale: 0.06,
+            kickLift: 10,
+            snareTilt: 0.8,
+            sway: 4
         }
     };
 
-    const SILENCE =
-        "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+    function silentClip() {
+        const bytes = new Uint8Array(46);
+        const view = new DataView(bytes.buffer);
+        const write = (offset, text) => {
+            for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+        };
+
+        write(0, "RIFF");
+        view.setUint32(4, 38, true);
+        write(8, "WAVE");
+        write(12, "fmt ");
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, 8000, true);
+        view.setUint32(28, 16000, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        write(36, "data");
+        view.setUint32(40, 2, true);
+
+        return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+    }
 
     const $ = id => document.getElementById(id);
 
+    const stage = $("intro-stage");
     const video = $("intro-video");
+    const backdrop = $("intro-backdrop");
     const loadingImage = $("loading-image");
     const loadingScreen = $("loading-screen");
     const messageScreen = $("message-screen");
@@ -51,12 +77,17 @@
     const voice = new Audio();
     const bgm = new Audio();
     voice.preload = bgm.preload = "auto";
+    bgm.crossOrigin = "anonymous";
+
+    const portrait = window.matchMedia("(orientation: portrait)");
 
     let muted = false;
     let musicStarted = false;
     let audioContext = null;
     let analyser = null;
+    let masterGain = null;
     let spectrum = null;
+    let resetBeat = () => {};
 
     const assets = { video: null, cards: [], tracks: [] };
 
@@ -165,9 +196,20 @@
         assets.tracks = music.map((file, i) => (i === 0 && byKey.music ? byKey.music : file));
     }
 
+    function applyMute() {
+        video.muted = voice.muted = muted;
+
+        if (masterGain) {
+            bgm.muted = false;
+            masterGain.gain.value = muted ? 0 : 1;
+        } else {
+            bgm.muted = muted;
+        }
+    }
+
     function setMuted(value) {
         muted = value;
-        video.muted = voice.muted = bgm.muted = muted;
+        applyMute();
 
         audioIcon.src = muted ? "audio1.png" : "audio.png";
         audioToggle.setAttribute("aria-pressed", String(muted));
@@ -181,45 +223,115 @@
             try {
                 audioContext = new Context();
                 const source = audioContext.createMediaElementSource(bgm);
+
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 1024;
-                analyser.smoothingTimeConstant = 0.55;
+                analyser.fftSize = 2048;
+                analyser.smoothingTimeConstant = 0.35;
+                spectrum = new Float32Array(analyser.frequencyBinCount);
+
+                masterGain = audioContext.createGain();
+
                 source.connect(analyser);
-                analyser.connect(audioContext.destination);
-                spectrum = new Uint8Array(analyser.frequencyBinCount);
+                source.connect(masterGain);
+                masterGain.connect(audioContext.destination);
+
                 audioContext.resume();
+                applyMute();
             } catch {
                 analyser = null;
+                masterGain = null;
             }
         }
 
+        const clip = silentClip();
         for (const el of [voice, bgm]) {
-            el.src = SILENCE;
+            el.src = clip;
             el.play().then(() => el.pause()).catch(() => {});
         }
     }
 
     function startPulse() {
         if (!analyser) return;
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-        const { lowBin, highBin, sensitivity, decay, maxScale } = CONFIG.beat;
-        let baseline = 0;
-        let level = 0;
+        const cfg = CONFIG.beat;
+        const binHz = audioContext.sampleRate / analyser.fftSize;
+        const clampDb = db => (db > -140 ? db : -140);
 
-        const frame = () => {
-            analyser.getByteFrequencyData(spectrum);
+        const makeBand = spec => ({
+            lo: Math.max(1, Math.round(spec.from / binHz)),
+            hi: Math.max(2, Math.round(spec.to / binHz)),
+            floor: spec.floor,
+            range: spec.range,
+            release: spec.release,
+            average: null,
+            level: 0
+        });
 
-            let sum = 0;
-            for (let i = lowBin; i <= highBin; i++) sum += spectrum[i];
-            const energy = sum / (highBin - lowBin + 1) / 255;
+        const kick = makeBand(cfg.kick);
+        const snare = makeBand(cfg.snare);
+        const hat = makeBand(cfg.hat);
+        const body = { lo: kick.lo, hi: hat.hi, average: null, peak: -140 };
 
-            baseline += (energy - baseline) * 0.05;
+        const bandDb = band => {
+            let power = 0;
+            for (let i = band.lo; i <= band.hi; i++) {
+                power += Math.pow(10, clampDb(spectrum[i]) / 10);
+            }
+            return 10 * Math.log10(power / (band.hi - band.lo + 1) + 1e-14);
+        };
 
-            const hit = Math.min(Math.max((energy - baseline * 1.05) * sensitivity, 0), 1);
-            level = Math.max(hit, level * decay);
+        const follow = (band, db, dt) => {
+            if (band.average === null) band.average = db;
+            const delta = db - band.average;
+            band.average += (db - band.average) * (1 - Math.exp(-dt / cfg.trackMemory));
+            return delta;
+        };
 
-            heading.style.transform = `scale(${1 + level * maxScale})`;
+        const advance = (band, db, dt) => {
+            const delta = follow(band, db, dt);
+            const strength = Math.min(Math.max((delta - band.floor) / band.range, 0), 1);
+            const previous = band.level;
+            band.level = Math.max(strength, band.level * Math.exp(-dt / band.release));
+            return strength > previous + 0.25;
+        };
+
+        let tilt = 1;
+        let last = performance.now();
+        let loud = 0;
+
+        resetBeat = () => {
+            kick.average = snare.average = hat.average = body.average = null;
+            body.peak = -140;
+        };
+
+        const frame = now => {
+            const dt = Math.min((now - last) / 1000, 0.05) || 0.016;
+            last = now;
+
+            analyser.getFloatFrequencyData(spectrum);
+
+            advance(kick, bandDb(kick), dt);
+            const snareHit = advance(snare, bandDb(snare), dt);
+            advance(hat, bandDb(hat), dt);
+            if (snareHit) tilt = -tilt;
+
+            const overall = bandDb(body);
+            body.peak = Math.max(overall, body.peak - dt * 2);
+            const presence = Math.min(Math.max(1 - (body.peak - overall) / 18, 0), 1);
+            loud += (presence - loud) * (1 - Math.exp(-dt / 0.4));
+
+            const t = now / 1000;
+            const scale = 1 + kick.level * cfg.kickScale + loud * 0.008;
+            const x = Math.sin(t * 1.3) * loud * cfg.sway;
+            const y = -kick.level * cfg.kickLift + Math.sin(t * 2.1) * loud * cfg.sway * 0.6;
+            const tiltDeg = tilt * snare.level * cfg.snareTilt;
+            const glow = Math.min(kick.level * 0.6 + hat.level * 0.5, 1);
+
+            heading.style.transform =
+                `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${tiltDeg.toFixed(3)}deg) scale(${scale.toFixed(4)})`;
+            heading.style.textShadow =
+                `0 0 ${(glow * 34).toFixed(1)}px rgba(255, 255, 255, ${(glow * 0.55).toFixed(2)})`;
+
             requestAnimationFrame(frame);
         };
 
@@ -249,20 +361,34 @@
         });
     }
 
+    function syncBackdrop() {
+        if (!portrait.matches || video.paused) return;
+        if (backdrop.paused) backdrop.play().catch(() => {});
+        if (Math.abs(backdrop.currentTime - video.currentTime) > 0.25) {
+            backdrop.currentTime = video.currentTime;
+        }
+    }
+
     function playIntro() {
         if (!assets.video) return Promise.resolve();
 
         return new Promise(resolve => {
             const done = () => {
                 video.onended = video.onerror = null;
+                backdrop.pause();
                 resolve();
             };
 
             video.onended = done;
             video.onerror = done;
-            video.src = assets.video;
+            video.ontimeupdate = syncBackdrop;
+
+            backdrop.src = video.src = assets.video;
+            backdrop.muted = true;
             video.muted = muted;
-            video.play().then(() => video.classList.add("visible")).catch(done);
+
+            if (portrait.matches) backdrop.play().catch(() => {});
+            video.play().then(() => stage.classList.add("visible")).catch(done);
         });
     }
 
@@ -300,8 +426,13 @@
 
         musicStarted = true;
         bgm.loop = tracks.length === 1;
-        bgm.muted = muted;
+        bgm.muted = masterGain ? false : muted;
         bgm.src = tracks[index];
+        resetBeat();
+
+        if (audioContext && audioContext.state !== "running") {
+            audioContext.resume().catch(() => {});
+        }
 
         const next = (offset, count) => () => playMusic((index + offset) % tracks.length, count);
         bgm.onended = next(1, 0);
@@ -317,7 +448,7 @@
         gate.classList.add("leaving");
 
         await intro;
-        video.classList.remove("visible");
+        stage.classList.remove("visible");
         await wait(CONFIG.gapMs);
 
         await playCards();
