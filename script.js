@@ -6,11 +6,24 @@ const messageScreen = document.getElementById("message-screen");
 const audioToggle = document.getElementById("audio-toggle");
 const audioIcon = document.getElementById("audio-icon");
 
-let muted = false;
-let currentAudio = null;
-let currentTrack = 0;
+const MUSIC_SEARCH_LIMIT = 100;
 
-const audioFiles = [];
+const FALLBACK_IMAGE_TIME = 3000;
+
+const BETWEEN_ELEMENTS = 500;
+
+let muted = false;
+
+let backgroundAudio = null;
+
+let musicTracks = [];
+
+let currentMusicIndex = 0;
+
+
+/* ==================================================
+   GENERAL UTILITIES
+================================================== */
 
 function wait(milliseconds) {
     return new Promise(resolve => {
@@ -18,211 +31,663 @@ function wait(milliseconds) {
     });
 }
 
+
+/* ==================================================
+   FILE CHECKING
+================================================== */
+
+/*
+ * We intentionally do NOT let a missing file
+ * break the site.
+ */
 async function fileExists(filename) {
+
     try {
-        const response = await fetch(filename, {
-            method: "HEAD",
-            cache: "no-store"
-        });
+
+        const response = await fetch(
+            filename,
+            {
+                method: "HEAD",
+                cache: "no-store"
+            }
+        );
 
         return response.ok;
 
     } catch {
+
         return false;
     }
 }
 
-async function findMusicFiles() {
 
+/* ==================================================
+   MUSIC DISCOVERY
+================================================== */
+
+async function findMusicTracks() {
+
+    const results = [];
+
+    /*
+     * Check all possible music files at the same time.
+     *
+     * Missing files are simply ignored.
+     */
     const checks = [];
 
-    for (let number = 1; number <= 100; number++) {
+    for (
+        let number = 1;
+        number <= MUSIC_SEARCH_LIMIT;
+        number++
+    ) {
 
         const filename = `music${number}.mp3`;
 
         checks.push(
+
             fileExists(filename).then(exists => {
+
                 if (exists) {
-                    audioFiles.push({
+
+                    results.push({
                         number: number,
                         filename: filename
                     });
+
                 }
+
             })
+
         );
     }
 
+
     await Promise.all(checks);
 
-    audioFiles.sort((a, b) => a.number - b.number);
+
+    /*
+     * Sort numerically.
+     */
+    results.sort(
+        (a, b) => a.number - b.number
+    );
+
+
+    musicTracks = results;
+
 
     console.log(
-        "Music files found:",
-        audioFiles.map(track => track.filename)
+        "Music found:",
+        musicTracks.map(track => track.filename)
     );
 }
 
-function playAudio(filename) {
 
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-    }
+/* ==================================================
+   PRELOADING
+================================================== */
 
-    currentAudio = new Audio(filename);
+function preloadImage(filename) {
 
-    currentAudio.preload = "auto";
-    currentAudio.loop = false;
-    currentAudio.volume = 1;
-    currentAudio.muted = muted;
-
-    currentAudio.addEventListener("ended", playNextMusic);
-
-    currentAudio.play().catch(() => {
-
-    });
-}
-
-function playNextMusic() {
-
-    if (audioFiles.length === 0) {
-        return;
-    }
-    currentTrack++;
-
-    if (currentTrack >= audioFiles.length) {
-        currentTrack = 0;
-    }
-    playAudio(audioFiles[currentTrack].filename);
-}
-
-function startMusic() {
-
-    if (audioFiles.length === 0) {
-        console.log("No music files found. Continuing without music.");
-        return;
-    }
-    currentTrack = 0;
-    playAudio(audioFiles[currentTrack].filename);
-}
-
-async function showLoadingImage(imageNumber) {
     return new Promise(resolve => {
-        const imageName = `loading${imageNumber}.png`;
-        const audioName = `loading${imageNumber}.mp3`;
-        loadingImage.src = imageName;
-        loadingImage.onload = () => {
-            loadingImage.classList.add("visible");
-            const sound = new Audio(audioName);
-            sound.muted = muted;
-            sound.volume = 1;
-            sound.play().catch(() => {});
-            sound.addEventListener("ended", async () => {
-                loadingImage.classList.remove("visible");
-                await wait(700);
-                resolve();
-            }, {
-                once: true
-            });
+
+        const image = new Image();
+
+        image.onload = () => {
+            resolve(true);
         };
 
-        loadingImage.onerror = async () => {
+        image.onerror = () => {
             console.warn(
-                `${imageName} was not found. Skipping it.`
+                `Could not load ${filename}`
             );
-            await wait(300);
-            resolve();
+
+            resolve(false);
         };
+
+        image.src = filename;
 
     });
 }
+
+
+function preloadAudio(filename) {
+
+    return new Promise(resolve => {
+
+        const audio = new Audio();
+
+        audio.preload = "auto";
+
+        audio.addEventListener(
+            "canplaythrough",
+            () => resolve(true),
+            { once: true }
+        );
+
+        audio.addEventListener(
+            "error",
+            () => resolve(false),
+            { once: true }
+        );
+
+        audio.src = filename;
+
+        audio.load();
+
+    });
+}
+
+
+/*
+ * Preload the two loading images and their sounds.
+ *
+ * This does NOT prevent the website from continuing
+ * if something is missing.
+ */
+async function preloadIntroAssets() {
+
+    await Promise.all([
+
+        preloadImage("loading1.png"),
+
+        preloadImage("loading2.png"),
+
+        preloadAudio("loading1.mp3"),
+
+        preloadAudio("loading2.mp3")
+
+    ]);
+
+}
+
+
+/* ==================================================
+   VIDEO
+================================================== */
 
 async function playIntroVideo() {
 
-    return new Promise(resolve => {
+    /*
+     * Show the video.
+     */
+    video.classList.add("visible");
 
-        video.classList.add("visible");
+    /*
+     * Keep the video muted initially.
+     *
+     * This is important because browsers generally
+     * allow muted autoplay but can block autoplay
+     * with sound.
+     */
+    video.muted = muted;
 
-        video.muted = muted;
 
-        video.play().catch(error => {
+    /*
+     * Attempt playback.
+     */
+    try {
 
-            console.warn(
-                "Video autoplay was blocked:",
-                error
-            );
+        await video.play();
 
-            setTimeout(resolve, 1000);
-        });
+    } catch (error) {
 
-        video.addEventListener("ended", async () => {
+        console.warn(
+            "Video autoplay was blocked.",
+            error
+        );
 
-            video.classList.remove("visible");
+        /*
+         * Don't freeze the website.
+         */
+        await wait(2000);
 
-            await wait(700);
+        video.classList.remove("visible");
+
+        return;
+    }
+
+
+    /*
+     * Wait until the video finishes.
+     */
+    await new Promise(resolve => {
+
+        video.addEventListener(
+            "ended",
+            resolve,
+            { once: true }
+        );
+
+    });
+
+
+    /*
+     * Fade the video out.
+     */
+    video.classList.remove("visible");
+
+    await wait(BETWEEN_ELEMENTS);
+}
+
+
+/* ==================================================
+   LOADING IMAGE + SOUND
+================================================== */
+
+async function playLoadingElement(number) {
+
+    const imageFilename =
+        `loading${number}.png`;
+
+    const audioFilename =
+        `loading${number}.mp3`;
+
+
+    /*
+     * Make sure the image is actually present.
+     */
+    const imageAvailable =
+        await fileExists(imageFilename);
+
+
+    /*
+     * If the image doesn't exist, skip it.
+     */
+    if (!imageAvailable) {
+
+        console.warn(
+            `${imageFilename} not found. Skipping.`
+        );
+
+        return;
+    }
+
+
+    /*
+     * Display the image.
+     */
+    loadingImage.src = imageFilename;
+
+    loadingImage.classList.add("visible");
+
+
+    /*
+     * Check whether the audio exists.
+     */
+    const audioAvailable =
+        await fileExists(audioFilename);
+
+
+    /*
+     * If there is no audio, simply keep the image
+     * on screen for a few seconds.
+     */
+    if (!audioAvailable) {
+
+        await wait(FALLBACK_IMAGE_TIME);
+
+        loadingImage.classList.remove("visible");
+
+        await wait(BETWEEN_ELEMENTS);
+
+        return;
+    }
+
+
+    /*
+     * Create the sound.
+     */
+    const sound =
+        new Audio(audioFilename);
+
+    sound.preload = "auto";
+    sound.muted = muted;
+
+
+    /*
+     * We use a Promise with BOTH ended and error.
+     *
+     * This is important.
+     *
+     * If the audio fails, the sequence still continues.
+     */
+    await new Promise(resolve => {
+
+        let finished = false;
+
+
+        function finish() {
+
+            if (finished) {
+                return;
+            }
+
+            finished = true;
 
             resolve();
+        }
 
-        }, {
-            once: true
+
+        sound.addEventListener(
+            "ended",
+            finish,
+            { once: true }
+        );
+
+
+        sound.addEventListener(
+            "error",
+            finish,
+            { once: true }
+        );
+
+
+        /*
+         * Safety timeout.
+         *
+         * Even if a browser behaves strangely,
+         * the intro cannot get stuck forever.
+         */
+        const safetyTimer =
+            setTimeout(() => {
+
+                sound.pause();
+
+                finish();
+
+            }, 15000);
+
+
+        sound.play().catch(() => {
+
+            /*
+             * Autoplay blocked.
+             *
+             * Don't freeze the intro.
+             */
+            clearTimeout(safetyTimer);
+
+            finish();
+
         });
 
     });
+
+
+    /*
+     * Stop showing the image.
+     */
+    loadingImage.classList.remove("visible");
+
+    await wait(BETWEEN_ELEMENTS);
 }
 
-async function finishIntro() {
 
+/* ==================================================
+   FINAL MESSAGE
+================================================== */
+
+async function showFinalMessage() {
+
+    /*
+     * Fade the loading layer away.
+     */
     loadingScreen.classList.add("hidden");
 
     await wait(1200);
 
+
+    /*
+     * Fade in the text.
+     */
     messageScreen.classList.add("visible");
 
+    /*
+     * Let the message sit there.
+     */
     await wait(2500);
-
-    startMusic();
 }
 
-function updateAudioIcon() {
+
+/* ==================================================
+   BACKGROUND MUSIC
+================================================== */
+
+function playCurrentMusic() {
+
+    /*
+     * No music?
+     *
+     * That's completely valid.
+     */
+    if (musicTracks.length === 0) {
+
+        console.log(
+            "No background music found."
+        );
+
+        return;
+    }
+
+
+    /*
+     * Stop previous track.
+     */
+    if (backgroundAudio) {
+
+        backgroundAudio.pause();
+
+        backgroundAudio.currentTime = 0;
+    }
+
+
+    /*
+     * Create new track.
+     */
+    backgroundAudio =
+        new Audio(
+            musicTracks[currentMusicIndex].filename
+        );
+
+
+    backgroundAudio.preload = "auto";
+    backgroundAudio.volume = 1;
+    backgroundAudio.muted = muted;
+
+
+    /*
+     * When the track ends, advance to the
+     * next available track.
+     */
+    backgroundAudio.addEventListener(
+        "ended",
+        () => {
+
+            currentMusicIndex++;
+
+            /*
+             * Loop back to the beginning.
+             */
+            if (
+                currentMusicIndex >=
+                musicTracks.length
+            ) {
+
+                currentMusicIndex = 0;
+            }
+
+
+            playCurrentMusic();
+
+        }
+    );
+
+
+    /*
+     * Attempt playback.
+     */
+    backgroundAudio.play().catch(() => {
+
+        console.warn(
+            "Background music autoplay was blocked."
+        );
+
+    });
+
+}
+
+
+/* ==================================================
+   AUDIO BUTTON
+================================================== */
+
+function updateAudioButton() {
 
     if (muted) {
+
         audioIcon.src = "audio1.png";
+
     } else {
+
         audioIcon.src = "audio.png";
+
     }
 }
-audioToggle.addEventListener("click", () => {
 
-    muted = !muted;
 
-    updateAudioIcon();
+audioToggle.addEventListener(
+    "click",
+    () => {
 
-    if (currentAudio) {
-        currentAudio.muted = muted;
+        muted = !muted;
 
-        if (!muted) {
-            currentAudio.play().catch(() => {});
+        updateAudioButton();
+
+
+        /*
+         * Background music.
+         */
+        if (backgroundAudio) {
+
+            backgroundAudio.muted =
+                muted;
+
+
+            /*
+             * Clicking the button counts as a
+             * user interaction, so try playback.
+             */
+            if (!muted) {
+
+                backgroundAudio
+                    .play()
+                    .catch(() => {});
+
+            }
+
         }
-    }
 
-    video.muted = muted;
-});
+
+        /*
+         * Intro video.
+         */
+        video.muted = muted;
+
+    }
+);
+
+
+/* ==================================================
+   MAIN SEQUENCE
+================================================== */
 
 async function startSite() {
 
-    const musicSearch = findMusicFiles();
+    console.log(
+        "Starting site..."
+    );
+
+
+    /*
+     * Begin looking for music immediately.
+     *
+     * This happens while the intro is loading.
+     */
+    const musicSearch =
+        findMusicTracks();
+
+
+    /*
+     * Preload intro assets.
+     *
+     * Missing files do not stop anything.
+     */
+    await preloadIntroAssets();
+
+
+    /*
+     * ----------------------------------------------
+     * 1. VIDEO
+     * ----------------------------------------------
+     */
 
     await playIntroVideo();
 
-    await showLoadingImage(1);
 
-    await showLoadingImage(2);
+    /*
+     * ----------------------------------------------
+     * 2. LOADING IMAGE 1
+     * ----------------------------------------------
+     */
 
+    await playLoadingElement(1);
+
+
+    /*
+     * ----------------------------------------------
+     * 3. LOADING IMAGE 2
+     * ----------------------------------------------
+     */
+
+    await playLoadingElement(2);
+
+
+    /*
+     * Make sure music discovery is finished.
+     */
     await musicSearch;
 
-    await finishIntro();
+
+    /*
+     * ----------------------------------------------
+     * 4. FINAL MESSAGE
+     * ----------------------------------------------
+     */
+
+    await showFinalMessage();
+
+
+    /*
+     * ----------------------------------------------
+     * 5. BACKGROUND MUSIC
+     * ----------------------------------------------
+     */
+
+    playCurrentMusic();
+
+
+    console.log(
+        "Site ready."
+    );
 }
 
-updateAudioIcon();
+
+/* ==================================================
+   INITIALIZATION
+================================================== */
+
+updateAudioButton();
 
 startSite();
