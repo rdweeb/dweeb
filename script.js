@@ -1,4 +1,3 @@
-javascript
 const video = document.getElementById("intro-video");
 const loadingImage = document.getElementById("loading-image");
 const loadingScreen = document.getElementById("loading-screen");
