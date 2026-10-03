@@ -1,28 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loading...</title>
+    <meta name="theme-color" content="#000000">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests">
+    <title>Loading…</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <main id="loading-screen">
-        <video id="intro-video" playsinline preload="auto">
-            <source src="dweeb.mp4" type="video/mp4">
-        </video>
-        <img id="loading-image" src="" alt="">
-        <div id="loading-text"></div>
+        <video id="intro-video" playsinline preload="none"></video>
+        <img id="loading-image" alt="">
     </main>
-    <section id="message-screen">
+
+    <section id="message-screen" aria-live="polite">
         <h1>
             THE SITE IS STILL BEING WORKED ON,<br>
             CHECK BACK LATER.
         </h1>
     </section>
-    <button id="audio-toggle" aria-label="Toggle audio">
-        <img id="audio-icon" src="audio.png" alt="Audio">
+
+    <div id="gate">
+        <button id="enter" type="button" disabled>Loading 0%</button>
+        <div id="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+    </div>
+
+    <button id="audio-toggle" type="button" aria-label="Mute audio" aria-pressed="false">
+        <img id="audio-icon" src="audio.png" alt="">
     </button>
+
     <script src="script.js"></script>
 </body>
 </html>
