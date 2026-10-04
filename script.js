@@ -12,6 +12,8 @@
 
     document.documentElement.classList.remove("no-js");
 
+    const VERSION = "2026-10-04.1";
+
     const CONFIG = {
         video: "dweeb.mp4",
         cards: [
@@ -35,29 +37,7 @@
         }
     };
 
-    function silentClip() {
-        const bytes = new Uint8Array(46);
-        const view = new DataView(bytes.buffer);
-        const write = (offset, text) => {
-            for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
-        };
-
-        write(0, "RIFF");
-        view.setUint32(4, 38, true);
-        write(8, "WAVE");
-        write(12, "fmt ");
-        view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true);
-        view.setUint16(22, 1, true);
-        view.setUint32(24, 8000, true);
-        view.setUint32(28, 16000, true);
-        view.setUint16(32, 2, true);
-        view.setUint16(34, 16, true);
-        write(36, "data");
-        view.setUint32(40, 2, true);
-
-        return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
-    }
+    const versioned = file => `${file}?v=${VERSION}`;
 
     const $ = id => document.getElementById(id);
 
@@ -80,22 +60,55 @@
     bgm.crossOrigin = "anonymous";
 
     const portrait = window.matchMedia("(orientation: portrait)");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    let muted = false;
-    let musicStarted = false;
-    let audioContext = null;
-    let analyser = null;
-    let masterGain = null;
-    let spectrum = null;
-    let resetBeat = () => {};
+    const state = {
+        muted: false,
+        musicStarted: false,
+        started: false
+    };
+
+    const audio = {
+        context: null,
+        analyser: null,
+        gain: null,
+        spectrum: null
+    };
 
     const assets = { video: null, cards: [], tracks: [] };
 
+    let resetBeat = () => {};
+
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    async function exists(url) {
+    /* A 1-sample silent WAV, used to unlock playback inside the click gesture. */
+    function silentClip() {
+        const bytes = new Uint8Array(46);
+        const view = new DataView(bytes.buffer);
+        const tag = (offset, text) => {
+            for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+        };
+
+        tag(0, "RIFF");
+        view.setUint32(4, 38, true);
+        tag(8, "WAVE");
+        tag(12, "fmt ");
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, 8000, true);
+        view.setUint32(28, 16000, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        tag(36, "data");
+        view.setUint32(40, 2, true);
+
+        return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+    }
+
+    async function exists(file) {
         try {
-            const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+            const res = await fetch(versioned(file), { method: "HEAD", cache: "no-cache" });
             return res.ok;
         } catch {
             return false;
@@ -112,9 +125,9 @@
         return found;
     }
 
-    async function download(url, onProgress) {
+    async function download(file, onProgress) {
         try {
-            const res = await fetch(url, { cache: "force-cache" });
+            const res = await fetch(versioned(file), { cache: "no-cache" });
             if (!res.ok) return null;
 
             const total = Number(res.headers.get("content-length")) || 0;
@@ -146,18 +159,18 @@
     }
 
     function createProgress(weights) {
-        const state = weights.map(() => 0);
+        const values = weights.map(() => 0);
         const totalWeight = weights.reduce((a, b) => a + b, 0);
 
         const render = () => {
-            const done = state.reduce((sum, v, i) => sum + v * weights[i], 0);
+            const done = values.reduce((sum, v, i) => sum + v * weights[i], 0);
             const fraction = totalWeight ? done / totalWeight : 1;
             progressBar.style.transform = `scaleX(${fraction})`;
             enterButton.textContent = `Loading ${Math.floor(fraction * 100)}%`;
         };
 
         return index => value => {
-            state[index] = value;
+            values[index] = value;
             render();
         };
     }
@@ -165,21 +178,21 @@
     async function preload() {
         const music = await findMusic();
 
-        const jobs = [{ key: "video", url: CONFIG.video, weight: 6 }];
+        const jobs = [{ key: "video", file: CONFIG.video, weight: 6 }];
 
         CONFIG.cards.forEach((card, i) => {
-            jobs.push({ key: `image${i}`, url: card.image, weight: 1 });
-            if (card.audio) jobs.push({ key: `audio${i}`, url: card.audio, weight: 2 });
+            jobs.push({ key: `image${i}`, file: card.image, weight: 1 });
+            if (card.audio) jobs.push({ key: `audio${i}`, file: card.audio, weight: 2 });
         });
 
-        if (music.length) jobs.push({ key: "music", url: music[0], weight: 2 });
+        if (music.length) jobs.push({ key: "music", file: music[0], weight: 2 });
 
         const reporter = createProgress(jobs.map(job => job.weight));
 
         const results = await Promise.all(
             jobs.map(async (job, i) => {
                 const report = reporter(i);
-                const result = await download(job.url, report);
+                const result = await download(job.file, report);
                 report(1);
                 return [job.key, result];
             })
@@ -193,27 +206,29 @@
             audio: card.audio ? byKey[`audio${i}`] : null,
             hold: card.hold || 3000
         }));
-        assets.tracks = music.map((file, i) => (i === 0 && byKey.music ? byKey.music : file));
+        assets.tracks = music.map((file, i) =>
+            i === 0 && byKey.music ? byKey.music : versioned(file)
+        );
     }
 
     function applyMute() {
-        video.muted = voice.muted = muted;
+        video.muted = voice.muted = state.muted;
 
-        if (masterGain) {
+        if (audio.gain) {
             bgm.muted = false;
-            masterGain.gain.value = muted ? 0 : 1;
+            audio.gain.gain.value = state.muted ? 0 : 1;
         } else {
-            bgm.muted = muted;
+            bgm.muted = state.muted;
         }
     }
 
     function setMuted(value) {
-        muted = value;
+        state.muted = value;
         applyMute();
 
-        audioIcon.src = muted ? "audio1.png" : "audio.png";
-        audioToggle.setAttribute("aria-pressed", String(muted));
-        audioToggle.setAttribute("aria-label", muted ? "Unmute audio" : "Mute audio");
+        audioIcon.src = versioned(value ? "audio1.png" : "audio.png");
+        audioToggle.setAttribute("aria-pressed", String(value));
+        audioToggle.setAttribute("aria-label", value ? "Unmute audio" : "Mute audio");
     }
 
     function prepareAudio() {
@@ -221,25 +236,27 @@
 
         if (Context) {
             try {
-                audioContext = new Context();
-                const source = audioContext.createMediaElementSource(bgm);
+                const context = new Context();
+                const source = context.createMediaElementSource(bgm);
+                const analyser = context.createAnalyser();
+                const gain = context.createGain();
 
-                analyser = audioContext.createAnalyser();
                 analyser.fftSize = 2048;
                 analyser.smoothingTimeConstant = 0.35;
-                spectrum = new Float32Array(analyser.frequencyBinCount);
-
-                masterGain = audioContext.createGain();
 
                 source.connect(analyser);
-                source.connect(masterGain);
-                masterGain.connect(audioContext.destination);
+                source.connect(gain);
+                gain.connect(context.destination);
 
-                audioContext.resume();
+                audio.context = context;
+                audio.analyser = analyser;
+                audio.gain = gain;
+                audio.spectrum = new Float32Array(analyser.frequencyBinCount);
+
+                context.resume();
                 applyMute();
             } catch {
-                analyser = null;
-                masterGain = null;
+                audio.context = audio.analyser = audio.gain = audio.spectrum = null;
             }
         }
 
@@ -251,11 +268,11 @@
     }
 
     function startPulse() {
-        if (!analyser) return;
+        const { analyser, context, spectrum } = audio;
+        if (!analyser || reducedMotion.matches) return;
 
         const cfg = CONFIG.beat;
-        const binHz = audioContext.sampleRate / analyser.fftSize;
-        const clampDb = db => (db > -140 ? db : -140);
+        const binHz = context.sampleRate / analyser.fftSize;
 
         const makeBand = spec => ({
             lo: Math.max(1, Math.round(spec.from / binHz)),
@@ -270,12 +287,12 @@
         const kick = makeBand(cfg.kick);
         const snare = makeBand(cfg.snare);
         const hat = makeBand(cfg.hat);
-        const body = { lo: kick.lo, hi: hat.hi, average: null, peak: -140 };
+        const body = { lo: kick.lo, hi: hat.hi, peak: -140 };
 
         const bandDb = band => {
             let power = 0;
             for (let i = band.lo; i <= band.hi; i++) {
-                power += Math.pow(10, clampDb(spectrum[i]) / 10);
+                power += Math.pow(10, Math.max(spectrum[i], -140) / 10);
             }
             return 10 * Math.log10(power / (band.hi - band.lo + 1) + 1e-14);
         };
@@ -296,11 +313,12 @@
         };
 
         let tilt = 1;
-        let last = performance.now();
         let loud = 0;
+        let last = performance.now();
+        let frameId = 0;
 
         resetBeat = () => {
-            kick.average = snare.average = hat.average = body.average = null;
+            kick.average = snare.average = hat.average = null;
             body.peak = -140;
         };
 
@@ -311,9 +329,8 @@
             analyser.getFloatFrequencyData(spectrum);
 
             advance(kick, bandDb(kick), dt);
-            const snareHit = advance(snare, bandDb(snare), dt);
+            if (advance(snare, bandDb(snare), dt)) tilt = -tilt;
             advance(hat, bandDb(hat), dt);
-            if (snareHit) tilt = -tilt;
 
             const overall = bandDb(body);
             body.peak = Math.max(overall, body.peak - dt * 2);
@@ -324,18 +341,26 @@
             const scale = 1 + kick.level * cfg.kickScale + loud * 0.008;
             const x = Math.sin(t * 1.3) * loud * cfg.sway;
             const y = -kick.level * cfg.kickLift + Math.sin(t * 2.1) * loud * cfg.sway * 0.6;
-            const tiltDeg = tilt * snare.level * cfg.snareTilt;
+            const angle = tilt * snare.level * cfg.snareTilt;
             const glow = Math.min(kick.level * 0.6 + hat.level * 0.5, 1);
 
             heading.style.transform =
-                `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${tiltDeg.toFixed(3)}deg) scale(${scale.toFixed(4)})`;
+                `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${angle.toFixed(3)}deg) scale(${scale.toFixed(4)})`;
             heading.style.textShadow =
                 `0 0 ${(glow * 34).toFixed(1)}px rgba(255, 255, 255, ${(glow * 0.55).toFixed(2)})`;
 
-            requestAnimationFrame(frame);
+            frameId = requestAnimationFrame(frame);
         };
 
-        requestAnimationFrame(frame);
+        /* Don't burn CPU while the tab is in the background. */
+        document.addEventListener("visibilitychange", () => {
+            cancelAnimationFrame(frameId);
+            if (document.hidden) return;
+            last = performance.now();
+            frameId = requestAnimationFrame(frame);
+        });
+
+        frameId = requestAnimationFrame(frame);
     }
 
     function playToEnd(el, src) {
@@ -356,7 +381,7 @@
             };
 
             el.src = src;
-            el.muted = muted;
+            el.muted = state.muted;
             el.play().catch(finish);
         });
     }
@@ -374,7 +399,7 @@
 
         return new Promise(resolve => {
             const done = () => {
-                video.onended = video.onerror = null;
+                video.onended = video.onerror = video.ontimeupdate = null;
                 backdrop.pause();
                 resolve();
             };
@@ -385,7 +410,7 @@
 
             backdrop.src = video.src = assets.video;
             backdrop.muted = true;
-            video.muted = muted;
+            video.muted = state.muted;
 
             if (portrait.matches) backdrop.play().catch(() => {});
             video.play().then(() => stage.classList.add("visible")).catch(done);
@@ -421,27 +446,32 @@
     }
 
     function playMusic(index = 0, failures = 0) {
-        const tracks = assets.tracks;
+        const { tracks } = assets;
         if (!tracks.length || failures >= tracks.length) return;
 
-        musicStarted = true;
+        state.musicStarted = true;
         bgm.loop = tracks.length === 1;
-        bgm.muted = masterGain ? false : muted;
+        bgm.muted = audio.gain ? false : state.muted;
         bgm.src = tracks[index];
         resetBeat();
 
-        if (audioContext && audioContext.state !== "running") {
-            audioContext.resume().catch(() => {});
+        if (audio.context && audio.context.state !== "running") {
+            audio.context.resume().catch(() => {});
         }
 
-        const next = (offset, count) => () => playMusic((index + offset) % tracks.length, count);
-        bgm.onended = next(1, 0);
-        bgm.onerror = next(1, failures + 1);
+        const advance = failed => () =>
+            playMusic((index + 1) % tracks.length, failed ? failures + 1 : 0);
+
+        bgm.onended = advance(false);
+        bgm.onerror = advance(true);
 
         bgm.play().catch(() => {});
     }
 
     async function run() {
+        if (state.started) return;
+        state.started = true;
+
         prepareAudio();
 
         const intro = playIntro();
@@ -463,11 +493,11 @@
     }
 
     audioToggle.addEventListener("click", () => {
-        setMuted(!muted);
-        if (!muted && musicStarted && bgm.paused) bgm.play().catch(() => {});
+        setMuted(!state.muted);
+        if (!state.muted && state.musicStarted && bgm.paused) bgm.play().catch(() => {});
     });
 
-    enterButton.addEventListener("click", run, { once: true });
+    enterButton.addEventListener("click", run);
 
     async function boot() {
         setMuted(false);
