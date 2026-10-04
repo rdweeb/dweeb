@@ -23,6 +23,9 @@
         musicFile: n => `music${n}.mp3`,
         musicMax: 50,
         gapMs: 500,
+        fadeInMs: 1500,
+        fadeOutMs: 3500,
+        trackGapMs: 1200,
         imageFadeMs: 700,
         screenFadeMs: 1200,
         beat: {
@@ -72,8 +75,12 @@
         context: null,
         analyser: null,
         gain: null,
+        fade: null,
         spectrum: null
     };
+
+    let nextTimer = 0;
+    let fadeTimer = 0;
 
     const assets = { video: null, cards: [], tracks: [] };
 
@@ -81,7 +88,6 @@
 
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    /* A 1-sample silent WAV, used to unlock playback inside the click gesture. */
     function silentClip() {
         const bytes = new Uint8Array(46);
         const view = new DataView(bytes.buffer);
@@ -240,23 +246,26 @@
                 const source = context.createMediaElementSource(bgm);
                 const analyser = context.createAnalyser();
                 const gain = context.createGain();
+                const fade = context.createGain();
 
                 analyser.fftSize = 2048;
                 analyser.smoothingTimeConstant = 0.35;
 
                 source.connect(analyser);
-                source.connect(gain);
+                source.connect(fade);
+                fade.connect(gain);
                 gain.connect(context.destination);
 
                 audio.context = context;
                 audio.analyser = analyser;
                 audio.gain = gain;
+                audio.fade = fade;
                 audio.spectrum = new Float32Array(analyser.frequencyBinCount);
 
                 context.resume();
                 applyMute();
             } catch {
-                audio.context = audio.analyser = audio.gain = audio.spectrum = null;
+                audio.context = audio.analyser = audio.gain = audio.fade = audio.spectrum = null;
             }
         }
 
@@ -269,7 +278,7 @@
 
     function startPulse() {
         const { analyser, context, spectrum } = audio;
-        if (!analyser || reducedMotion.matches) return;
+        if (!analyser) return;
 
         const cfg = CONFIG.beat;
         const binHz = context.sampleRate / analyser.fftSize;
@@ -337,12 +346,13 @@
             const presence = Math.min(Math.max(1 - (body.peak - overall) / 18, 0), 1);
             loud += (presence - loud) * (1 - Math.exp(-dt / 0.4));
 
+            const energy = audio.fade ? audio.fade.gain.value : 1;
             const t = now / 1000;
-            const scale = 1 + kick.level * cfg.kickScale + loud * 0.008;
-            const x = Math.sin(t * 1.3) * loud * cfg.sway;
-            const y = -kick.level * cfg.kickLift + Math.sin(t * 2.1) * loud * cfg.sway * 0.6;
-            const angle = tilt * snare.level * cfg.snareTilt;
-            const glow = Math.min(kick.level * 0.6 + hat.level * 0.5, 1);
+            const scale = 1 + (kick.level * cfg.kickScale + loud * 0.008) * energy;
+            const x = Math.sin(t * 1.3) * loud * cfg.sway * energy;
+            const y = (-kick.level * cfg.kickLift + Math.sin(t * 2.1) * loud * cfg.sway * 0.6) * energy;
+            const angle = tilt * snare.level * cfg.snareTilt * energy;
+            const glow = Math.min(kick.level * 0.6 + hat.level * 0.5, 1) * energy;
 
             heading.style.transform =
                 `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${angle.toFixed(3)}deg) scale(${scale.toFixed(4)})`;
@@ -352,7 +362,6 @@
             frameId = requestAnimationFrame(frame);
         };
 
-        /* Don't burn CPU while the tab is in the background. */
         document.addEventListener("visibilitychange", () => {
             cancelAnimationFrame(frameId);
             if (document.hidden) return;
@@ -445,28 +454,74 @@
         await wait(CONFIG.imageFadeMs);
     }
 
+    function scheduleFade() {
+        if (!state.musicStarted) return;
+
+        const fadeIn = CONFIG.fadeInMs / 1000;
+        const fadeOut = CONFIG.fadeOutMs / 1000;
+        const { duration, currentTime } = bgm;
+        const remaining = Number.isFinite(duration) ? duration - currentTime : Infinity;
+
+        if (audio.fade) {
+            const param = audio.fade.gain;
+            const now = audio.context.currentTime;
+            const rise = Math.min(fadeIn, Math.max(remaining, 0.05));
+
+            param.cancelScheduledValues(now);
+            param.setValueAtTime(currentTime > 0.05 ? 1 : 0, now);
+            param.linearRampToValueAtTime(1, now + rise);
+
+            if (Number.isFinite(remaining) && remaining > fadeIn + 0.5) {
+                const end = now + remaining;
+                param.setValueAtTime(1, Math.max(now + rise, end - fadeOut));
+                param.linearRampToValueAtTime(0, end);
+            }
+            return;
+        }
+
+        clearInterval(fadeTimer);
+        fadeTimer = setInterval(() => {
+            const left = Number.isFinite(bgm.duration) ? bgm.duration - bgm.currentTime : Infinity;
+            const level = Math.min(bgm.currentTime / fadeIn, left / fadeOut, 1);
+            bgm.volume = Math.min(Math.max(level, 0), 1);
+        }, 50);
+    }
+
     function playMusic(index = 0, failures = 0) {
         const { tracks } = assets;
+        clearTimeout(nextTimer);
+        clearInterval(fadeTimer);
         if (!tracks.length || failures >= tracks.length) return;
 
         state.musicStarted = true;
-        bgm.loop = tracks.length === 1;
+        bgm.loop = false;
         bgm.muted = audio.gain ? false : state.muted;
         bgm.src = tracks[index];
         resetBeat();
+
+        if (audio.fade) {
+            audio.fade.gain.cancelScheduledValues(0);
+            audio.fade.gain.value = 0;
+        } else {
+            bgm.volume = 0;
+        }
 
         if (audio.context && audio.context.state !== "running") {
             audio.context.resume().catch(() => {});
         }
 
-        const advance = failed => () =>
+        const following = (failed = false) =>
             playMusic((index + 1) % tracks.length, failed ? failures + 1 : 0);
 
-        bgm.onended = advance(false);
-        bgm.onerror = advance(true);
+        bgm.onended = () => {
+            nextTimer = setTimeout(following, CONFIG.trackGapMs);
+        };
+        bgm.onerror = () => following(true);
 
         bgm.play().catch(() => {});
     }
+
+    bgm.addEventListener("playing", scheduleFade);
 
     async function run() {
         if (state.started) return;
@@ -494,7 +549,9 @@
 
     audioToggle.addEventListener("click", () => {
         setMuted(!state.muted);
-        if (!state.muted && state.musicStarted && bgm.paused) bgm.play().catch(() => {});
+        if (!state.muted && state.musicStarted && bgm.paused && !bgm.ended) {
+            bgm.play().catch(() => {});
+        }
     });
 
     enterButton.addEventListener("click", run);
