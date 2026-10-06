@@ -16,6 +16,14 @@
     color: rgba(255, 255, 255, 0.6);
 }
 
+#message-screen .about a {
+    pointer-events: auto;
+    display: block;
+    margin-top: 8px;
+    color: #fff;
+    text-underline-offset: 3px;
+}
+
 .about strong {
     color: #fff;
     font-weight: 500;
