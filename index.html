@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DWEEB RECORDS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12031a">
+<meta name="description" content="DWEEB RECORDS is RDweeb's projects hub, its' a purple website with a music player, games and trophies.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://rdweeb.xyz/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DWEEB RECORDS">
+<meta property="og:title" content="DWEEB RECORDS">
+<meta property="og:description" content="RDweeb's hub, a purple website with a music player, games and trophies.">
+<meta property="og:url" content="https://rdweeb.xyz/">
+<meta property="og:image" content="https://rdweeb.xyz/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DWEEB RECORDS">
+<meta name="twitter:image" content="https://rdweeb.xyz/og.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"DWEEB RECORDS","alternateName":["DWEEB//OS","RDweeb"],"url":"https://rdweeb.xyz/","description":"RDweeb's music and projects hub, it's a purple website with a music player, games and trophies."}</script>
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://*.goatcounter.com; media-src 'self' blob:; connect-src 'self' https://*.goatcounter.com; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27 shape-rendering=%27crispEdges%27%3E%3Crect width=%2716%27 height=%2716%27 fill=%27%231f0623%27/%3E%3Crect x=%271%27 y=%271%27 width=%2714%27 height=%2714%27 fill=%27%23de37e4%27/%3E%3Cpath d=%27M5 4h3l3 2v4l-3 2H5z%27 fill=%27%23fff%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/guard.js"></script>
+</head>
+<body>
+<!-- hi.. -->
+
+<div id="app">
+
+  <div id="bg">
+    <div id="glow"></div>
+    <div id="waves">
+      <svg class="wave w3" viewBox="0 0 2400 400" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9db8e6" stop-opacity=".2"/><stop offset="1" stop-color="#5a87d0" stop-opacity=".06"/></linearGradient></defs><path fill="url(#g3)" d="M0 200 C300 100 900 300 1200 200 C1500 100 2100 300 2400 200 V400 H0Z"/><path class="crest" d="M0 200 C300 100 900 300 1200 200 C1500 100 2100 300 2400 200"/></svg>
+      <svg class="wave w2" viewBox="0 0 2400 400" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ee52f2" stop-opacity=".38"/><stop offset="1" stop-color="#de37e4" stop-opacity=".10"/></linearGradient></defs><path fill="url(#g2)" d="M0 200 C300 100 900 300 1200 200 C1500 100 2100 300 2400 200 V400 H0Z"/><path class="crest" d="M0 200 C300 100 900 300 1200 200 C1500 100 2100 300 2400 200"/></svg>
+      <svg class="wave w1" viewBox="0 0 2400 400" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f08df2" stop-opacity=".48"/><stop offset="1" stop-color="#5a87d0" stop-opacity=".35"/></linearGradient></defs><path fill="url(#g1)" d="M0 200 C300 100 900 300 1200 200 C1500 100 2100 300 2400 200 V400 H0Z"/><path class="crest" d="M0 200 C300 100 900 300 1200 200 C1500 100 2100 300 2400 200"/></svg>
+    </div>
+  </div>
+
+  <canvas id="fx"></canvas>
+
+  <header id="top">
+    <div id="sysname">DWEEB<b>//</b>OS <small>FOR RDWEEB</small></div>
+    <div id="status">
+      <div id="views-wrap" title="visitors"><img id="eyes" src="icons/eyes.png" alt="views"><span id="views">0</span></div>
+      <time id="clock"></time>
+      <div id="meter" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+  </header>
+
+  <div id="splash" aria-live="polite" hidden><span id="sp-txt"></span></div>
+
+  <main id="xmb"><div id="cats"></div></main>
+
+  <div id="hint">
+    <span class="kb"><b>&lt;</b><b>&gt;</b> category &nbsp; <b>&#9650;</b><b>&#9660;</b> select &nbsp; <b>ENTER</b> open &nbsp; <b>H</b> help</span>
+    <span class="tc">swipe to move &middot; tap an icon to open</span>
+  </div>
+
+  <section id="player" aria-label="music player">
+    <div class="tb"><span>&#9835; NOW PLAYING</span><span id="pl-state">READY</span></div>
+    <button id="pl-covbtn" class="cvbtn" type="button" aria-label="track list"><img id="pl-cover" alt=""></button>
+    <div class="info">
+      <div class="ttl"><span id="pl-title">--</span></div>
+      <div class="meta"><span id="pl-artist"></span></div>
+      <div class="row">
+        <div id="pl-bar" class="bar" role="slider" aria-label="progress"><i id="pl-fill"></i></div>
+        <span id="pl-time" class="lcd">0:00 / 0:00</span>
+      </div>
+    </div>
+    <div class="ctl">
+      <button id="pl-prev" type="button" aria-label="previous"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 6h2v12H6zM9.5 12L18 18V6z"/></svg></button>
+      <button id="pl-play" type="button" class="big" aria-label="play / pause">
+        <svg class="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+      <button id="pl-next" type="button" aria-label="next"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+      <button id="pl-loop" type="button" aria-label="loop track"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+      <button id="pl-shuf" type="button" aria-label="shuffle"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M10.6 9.2L5.4 4 4 5.4l5.2 5.2 1.4-1.4zM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4h-5.5zm.3 9.4l-1.4 1.4 3.1 3.1-2 2H20v-5.5l-2 2-3.2-3z"/></svg></button>
+      <button id="pl-list" type="button" aria-label="track list"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v2H3zM3 11h18v2H3zM3 16h12v2H3z"/></svg></button>
+      <div class="vol">
+        <button id="pl-mute" type="button" aria-label="mute"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg></button>
+        <input id="pl-vol" type="range" min="0" max="1" step="0.01" aria-label="volume">
+      </div>
+    </div>
+    <ul id="tracklist" hidden></ul>
+  </section>
+
+  <div id="toast"></div>
+</div>
+
+<div id="boot">
+  <video id="intro" playsinline webkit-playsinline preload="auto" disablepictureinpicture hidden></video>
+  <div id="dl">
+    <div class="lico"><i></i><i></i><b></b></div>
+    <div class="lbar"><i id="load-fill"></i></div>
+    <span id="load-txt">Downloading 0/0 content!</span>
+  </div>
+  <div id="gate" hidden>PRESS ANY KEY OR TAP TO START</div>
+  <div id="skip" hidden>tap to skip</div>
+</div>
+
+<noscript><p class="ns">DWEEB RECORDS is the official site of RDweeb. it runs on javascript, turn it on and come back :)</p></noscript>
+
+<script src="js/config.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/util.js"></script>
+<script src="js/tuning.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/visualizer.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/player.js"></script>
+<script src="js/extras.js"></script>
+<script src="js/store.js"></script>
+<script src="js/seasons.js"></script>
+<script src="js/seasonfx.js"></script>
+<script src="js/trophies.js"></script>
+<script src="js/games.js"></script>
+<script src="js/games-arcade.js"></script>
+<script src="js/games-rhythm.js"></script>
+<script src="js/changelog.js"></script>
+<script src="js/eggs.js"></script>
+<script src="js/pet.js"></script>
+<script src="js/emotion.js"></script>
+<script src="js/splash.js"></script>
+<script src="js/counter.js"></script>
+<script src="js/boot.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

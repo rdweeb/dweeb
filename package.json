@@ -1,0 +1,15 @@
+{
+  "name": "dweeb-os-final-final-2",
+  "version": "0.0.0-probably",
+  "description": "i dont know what a package manager does. it is here because other projects have one",
+  "private": true,
+  "scripts": {
+    "build": "echo there is no build. it just works",
+    "test": "echo it works on my machine && exit 0",
+    "start": "echo open index.html. that is the whole start"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "keywords": ["purple", "websites", "vibes", "idk"],
+  "license": "do whatever. just dont be weird about it"
+}
