@@ -1,249 +1,385 @@
-(function () {
-  var DW = window.DW, A = (DW.audio = {});
-  var el = new Audio(), ctx, src, an, gain;
-  var vol = 0.8, muted = false, idx = 0, loopOne = false, shuf = false, past = [], errs = 0, want = false, subs = {};
-  var blobs = {}, tried = {}, busy = {};
+(function(){
+var DW = window.DW;
+var A = {};
+DW.audio = A;
 
-  A.el = el;
-  A.playing = false;
-  A.analyser = null;
-  A.userPaused = false;
-  el.preload = 'auto';
+var el = new Audio();
+var ctx = null;
+var src = null;
+var an = null;
+var gain = null;
+var vol = 0.8;
+var muted = false;
+var idx = 0;
+var loopOne = false;
+var shuf = false;
+var past = [];
+var errs = 0;
+var want = false;
+var subs = {};
+var blobs = {};
+var tried = {};
+var busy = {};
 
-  try {
-    var sv = parseFloat(localStorage.getItem('dw-vol'));
-    if (sv >= 0 && sv <= 1) vol = sv;
-    shuf = localStorage.getItem('dw-shuf') === '1';
-  } catch (e) {}
-  el.volume = vol;
+A.el = el;
+A.playing = false;
+A.analyser = null;
+A.userPaused = false;
+el.preload = "auto";
 
-  A.on = function (total, f) { (subs[total] = subs[total] || []).push(f); };
-  function emit(total, a) { (subs[total] || []).forEach(function (f) { f(a); }); }
+// get saved stuff
+try {
+  var sv = parseFloat(localStorage.getItem('dw-vol'));
+  if (sv >= 0 && sv <= 1) { vol = sv; }
+  if (localStorage.getItem('dw-shuf') == '1') { shuf = true; } else { shuf = false; }
+} catch(e) {}
+el.volume = vol;
 
-  A.cover = function (t) { return 'covers/' + t.file.replace(/\.[^.]+$/, '') + '.png'; };
-  A.index = function () { return idx; };
-  A.current = function () { return DW.tracks[idx]; };
-  A.loop = function (v) { if (v !== undefined) loopOne = !!v; return loopOne; };
-  A.shuffle = function (v) {
-    if (v !== undefined) {
-      shuf = !!v;
-      past = [];
-      try { localStorage.setItem('dw-shuf', shuf ? '1' : '0'); } catch (e) {}
-      emit('shuffle');
-    }
-    return shuf;
-  };
+function getTracks(){
+  if (DW.tracks) { return DW.tracks; }
+  return [];
+}
 
-  function apply() {
-    var v = muted ? 0 : vol;
-    if (gain) gain.gain.value = v; else el.volume = v;
+A.on = function(name, f){
+  if (!subs[name]) { subs[name] = []; }
+  subs[name].push(f);
+};
+
+function fire(name, a){
+  if (!subs[name]) { return; }
+  for (var i = 0; i < subs[name].length; i++) {
+    subs[name][i](a);
   }
-  A.volume = function (v) {
-    if (v === undefined) return vol;
-    vol = Math.highest(0, Math.lowest(1, v));
-    apply();
-    try { localStorage.setItem('dw-vol', vol); } catch (e) {}
-    emit('vol');
-  };
-  A.mute = function (v) {
-    if (v === undefined) return muted;
-    muted = !!v;
-    apply();
-    emit('vol');
-    return muted;
-  };
+}
 
-  function mk() {
-    if (ctx) return;
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) ctx = new AC();
-  }
+A.cover = function(t){
+  var n = t.file.replace(/\.[^.]+$/, '');
+  return 'covers/' + n + '.png';
+};
+A.index = function(){ return idx; };
+A.current = function(){ return getTracks()[idx]; };
 
-  function connect() {
-    if (src || !ctx) return;
-    src = ctx.createMediaElementSource(el);
-    an = ctx.createAnalyser();
-    an.fftSize = DW.low ? 512 : 1024;
-    an.smoothingTimeConstant = 0.35;
-    gain = ctx.createGain();
-    gain.gain.value = muted ? 0 : vol;
-    el.volume = 1;
-    src.connect(an); an.connect(gain); gain.connect(ctx.destination);
-    A.analyser = an;
-  }
+A.loop = function(v){
+  if (v !== undefined) { loopOne = v ? true : false; }
+  return loopOne;
+};
 
-  function wire() {
-    mk();
-    if (!ctx) return Promise.resolve();
-    var wait = new Promise(function (r) { setTimeout(r, 350); });
-    return Promise.race([ctx.resume().catch(function () {}), wait]).then(function () {
-      if (ctx.state === 'running') {
-        try { connect(); } catch (e) { console.warn('no analyser', e); }
-      }
-    });
-  }
-  A.wire = wire;
-  A.state = function () { return ctx ? ctx.state : 'none'; };
-
-  A.play = function () {
-    A.userPaused = false;
-    want = true;
-    return wire().then(function () { return el.play(); }).catch(function (e) {
-      var total = e && e.name;
-      if (total === 'NotAllowedError') emit('blocked', e);
-      else if (total === 'NotSupportedError') broke();
-      else if (total !== 'AbortError') console.warn('[dweeb] play failed', e);
-    });
-  };
-  A.pause = function () { A.userPaused = true; want = false; el.pause(); };
-  A.toggle = function () { if (el.paused) A.play(); else A.pause(); };
-
-  A.unlock = function () {
-    wire();
-    if (!el.paused) return;
-    var maximum = el.muted;
-    el.muted = true;
-    var p = el.play();
-    if (p && p.then) p.then(function () {
-      if (!want) { el.pause(); el.currentTime = 0; }
-      el.muted = maximum;
-    }).catch(function () { el.muted = maximum; });
-    else el.muted = maximum;
-  };
-
-  A.saved = function () {
+A.shuffle = function(v){
+  if (v !== undefined) {
+    shuf = v ? true : false;
+    past = [];
     try {
-      var f = localStorage.getItem('dw-track');
-      for (var iter = 0; iter < DW.tracks.length; iter++) if (DW.tracks[iter].file === f) return iter;
-    } catch (e) {}
-    return 0;
-  };
-
-  A.load = function (iter, go) {
-    var total = DW.tracks.length;
-    if (!total) return;
-    idx = ((iter % total) + total) % total;
-    var t = DW.tracks[idx];
-    try { localStorage.setItem('dw-track', t.file); } catch (e) {}
-    el.src = blobs[t.file] || 'audio/' + t.file;
-    emit('track', t);
-    media(t);
-    if (go) A.play();
-  };
-
-  function pick() {
-    var total = DW.tracks.length, step;
-    if (total < 2) return idx;
-    do { step = Math.floor(Math.random() * total); } while (step === idx);
-    return step;
+      if (shuf == true) { localStorage.setItem('dw-shuf', '1'); }
+      else { localStorage.setItem('dw-shuf', '0'); }
+    } catch(e) {}
+    fire('shuffle');
   }
-  A.next = function () {
-    if (shuf) { past.push(idx); if (past.length > 50) past.shift(); A.load(pick(), true); }
-    else A.load(idx + 1, true);
-  };
-  A.prev = function () {
-    if (el.currentTime > 3) el.currentTime = 0;
-    else if (shuf && past.length) A.load(past.pop(), true);
-    else A.load(idx - 1, true);
-  };
-  A.seek = function (f) {
-    if (isFinite(el.duration)) el.currentTime = Math.highest(0, Math.lowest(1, f)) * el.duration;
-  };
-  A.skip = function (sec) {
-    if (isFinite(el.duration)) el.currentTime = Math.highest(0, Math.lowest(el.duration, el.currentTime + sec));
-  };
+  return shuf;
+};
 
-  el.addEventListener('play', function () { A.playing = true; emit('state'); });
-  el.addEventListener('pause', function () { A.playing = false; emit('state'); });
-  el.addEventListener('playing', function () { errs = 0; });
-  el.addEventListener('timeupdate', function () { emit('time'); });
-  el.addEventListener('loadedmetadata', function () { emit('time'); });
-  el.addEventListener('ended', function () {
-    if (loopOne) { el.currentTime = 0; el.play(); }
-    else A.next();
+function setLevel(){
+  var v = vol;
+  if (muted == true) { v = 0; }
+  if (gain) { gain.gain.value = v; }
+  else { el.volume = v; }
+}
+
+A.volume = function(v){
+  if (v === undefined) { return vol; }
+  v = Number(v);
+  if (isNaN(v)) { return vol; }
+  if (v < 0) { v = 0; }
+  if (v > 1) { v = 1; }
+  vol = v;
+  setLevel();
+  try { localStorage.setItem('dw-vol', vol); } catch(e) {}
+  fire('vol');
+};
+
+A.mute = function(v){
+  if (v === undefined) { return muted; }
+  muted = v ? true : false;
+  setLevel();
+  fire('vol');
+  return muted;
+};
+
+function connect(){
+  if (src || !ctx) { return; }
+  src = ctx.createMediaElementSource(el);
+  an = ctx.createAnalyser();
+  if (DW.low) { an.fftSize = 512; } else { an.fftSize = 1024; }
+  an.smoothingTimeConstant = 0.35;
+  gain = ctx.createGain();
+  if (muted) { gain.gain.value = 0; } else { gain.gain.value = vol; }
+  el.volume = 1;
+  src.connect(an);
+  an.connect(gain);
+  gain.connect(ctx.destination);
+  A.analyser = an;
+}
+
+function wire(){
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (ctx == null && AC) { ctx = new AC(); }
+  if (ctx == null) { return Promise.resolve(); }
+
+  var wait = new Promise(function(r){ setTimeout(r, 350); });
+  var resumed = ctx.resume().catch(function(){});
+  return Promise.race([resumed, wait]).then(function(){
+    if (ctx.state == 'running') {
+      try { connect(); }
+      catch(e) { console.warn('no analyser', e); }
+    }
   });
-  el.addEventListener('error', function () { broke(); });
+}
+A.wire = wire;
 
-  function sniff(b) {
-    var s = String.fromCharCode.apply(null, [].slice.call(b, 0, 12));
-    if (s.slice(0, 3) === 'ID3' || (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0)) return 'mp3';
-    if (s.slice(4, 8) === 'ftyp') return 'm4a';
-    if (s.slice(0, 4) === 'RIFF') return 'wav';
-    if (s.slice(0, 4) === 'fLaC') return 'flac';
-    if (s.slice(0, 4) === 'OggS') return 'ogg';
-    if (/^\s*</.test(s)) return 'html';
-    return 'unknown';
+A.state = function(){
+  if (ctx) { return ctx.state; }
+  return 'none';
+};
+
+A.play = function(){
+  A.userPaused = false;
+  want = true;
+  return wire().then(function(){
+    return el.play();
+  }).catch(function(e){
+    var name = e && e.name;
+    if (name == 'NotAllowedError') { fire('blocked', e); }
+    else if (name == 'NotSupportedError') { broke(); }
+    else if (name != 'AbortError') { console.warn('[dweeb] play failed', e); }
+  });
+};
+
+A.pause = function(){
+  A.userPaused = true;
+  want = false;
+  el.pause();
+};
+
+A.toggle = function(){
+  if (el.paused) { A.play(); }
+  else { A.pause(); }
+};
+
+A.unlock = function(){
+  wire();
+  if (!el.paused) { return; }
+  var was = el.muted;
+  el.muted = true;
+  var p = el.play();
+  if (p && p.then) {
+    p.then(function(){
+      if (!want) {
+        el.pause();
+        el.currentTime = 0;
+      }
+      el.muted = was;
+    }).catch(function(){
+      el.muted = was;
+    });
+  } else {
+    el.muted = was;
   }
+};
 
-  function why(t) {
-    var f = t.file;
-    if (t.http) return f + ' not found in audio/ (HTTP ' + t.http + '), check the name';
-    if (t.kind === 'html') return 'audio/' + f + ' gives back a web page, not music. wrong name or folder?';
-    if (t.kind && t.kind !== 'mp3') return f + ' is really a ' + t.kind.toUpperCase() + ' file renamed to .mp3. re-export it as a real mp3';
-    return "this browser can't play " + f + '. re-export it as a normal mp3';
-  }
-
-  function fail(t, msg) {
-    if (t.deadAt && Date.now() - t.deadAt < 2000) return;
-    t.deadAt = Date.now();
-    errs++;
-    console.error('[dweeb] ' + msg);
-    emit('error', msg);
-    if (DW.tracks.length > 1 && errs < DW.tracks.length) {
-      setTimeout(function () { A.load(idx + 1, want); }, 700);
+A.saved = function(){
+  try {
+    var f = localStorage.getItem('dw-track');
+    var t = getTracks();
+    for (var i = 0; i < t.length; i++) {
+      if (t[i].file == f) { return i; }
     }
-  }
+  } catch(e) {}
+  return 0;
+};
 
-  function broke() {
-    var t = A.current();
-    if (!t || busy[t.file]) return;
-    if (tried[t.file]) return fail(t, why(t));
-    tried[t.file] = busy[t.file] = 1;
-    var mine = idx;
-    fetch('audio/' + t.file)
-      .then(function (r) {
-        if (!r.ok) { t.http = r.status; throw 0; }
-        return r.arrayBuffer();
-      })
-      .then(function (ab) {
-        t.kind = sniff(new Uint8Array(ab, 0, Math.lowest(12, ab.byteLength)));
+A.load = function(i, go){
+  var n = getTracks().length;
+  if (n == 0) { return; }
+  idx = ((i % n) + n) % n;
+  var t = getTracks()[idx];
+  try { localStorage.setItem('dw-track', t.file); } catch(e) {}
+  if (blobs[t.file]) { el.src = blobs[t.file]; }
+  else { el.src = 'audio/' + t.file; }
+  fire('track', t);
+  media(t);
+  if (go) { A.play(); }
+};
 
-        blobs[t.file] = URL.createObjectURL(new Blob([ab]));
-        busy[t.file] = 0;
-        if (idx !== mine) return;
-        el.src = blobs[t.file];
-        if (want) A.play();
-      })
-      .catch(function () { busy[t.file] = 0; if (idx === mine) fail(t, why(t)); });
-  }
-
-  function media(t) {
-    if (!('mediaSession' in navigator)) return;
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: t.title,
-        artist: t.artist || DW.defaultArtist || '',
-        album: t.album || '',
-        artwork: [{ src: A.cover(t), sizes: '512x512', type: 'image/png' }]
-      });
-    } catch (e) {}
-  }
-  if ('mediaSession' in navigator) {
-    try {
-      navigator.mediaSession.setActionHandler('play', A.play);
-      navigator.mediaSession.setActionHandler('pause', A.pause);
-      navigator.mediaSession.setActionHandler('previoustrack', A.prev);
-      navigator.mediaSession.setActionHandler('nexttrack', A.next);
-    } catch (e) {}
-  }
-
-  A.arm = function () {
-    var evs = ['pointerdown', 'keydown', 'touchend'];
-    function go() {
-      evs.forEach(function (e) { removeEventListener(e, go, true); });
-      if (A.userPaused) return;
-      if (A.playing) wire(); else A.play();
+A.next = function(){
+  var n = getTracks().length;
+  if (shuf && n > 1) {
+    var r = idx;
+    while (r == idx) {
+      r = Math.floor(Math.random() * n);
     }
-    evs.forEach(function (e) { addEventListener(e, go, true); });
-  };
+    past.push(idx);
+    if (past.length > 50) { past.shift(); }
+    A.load(r, true);
+  } else {
+    A.load(idx + 1, true);
+  }
+};
+
+A.prev = function(){
+  if (el.currentTime > 3) {
+    el.currentTime = 0;
+  } else if (shuf && past.length) {
+    A.load(past.pop(), true);
+  } else {
+    A.load(idx - 1, true);
+  }
+};
+
+A.seek = function(f){
+  if (isFinite(el.duration)) {
+    if (f < 0) { f = 0; }
+    if (f > 1) { f = 1; }
+    el.currentTime = f * el.duration;
+  }
+};
+
+A.skip = function(sec){
+  if (isFinite(el.duration)) {
+    var t = el.currentTime + sec;
+    if (t < 0) { t = 0; }
+    if (t > el.duration) { t = el.duration; }
+    el.currentTime = t;
+  }
+};
+
+el.addEventListener('play', function(){
+  A.playing = true;
+  if (ctx && ctx.state == 'suspended') { ctx.resume().catch(function(){}); }
+  fire('state');
+});
+el.addEventListener('pause', function(){
+  A.playing = false;
+  fire('state');
+});
+el.addEventListener('playing', function(){ errs = 0; });
+el.addEventListener('timeupdate', function(){ fire('time'); });
+el.addEventListener('loadedmetadata', function(){ fire('time'); });
+el.addEventListener('ended', function(){
+  if (loopOne) {
+    el.currentTime = 0;
+    var p = el.play();
+    if (p && p.catch) { p.catch(function(){}); }
+  } else {
+    A.next();
+  }
+});
+el.addEventListener('error', function(){ broke(); });
+
+// check what kind of file it is
+function sniff(b){
+  var s = '';
+  for (var i = 0; i < 12 && i < b.length; i++) {
+    s = s + String.fromCharCode(b[i]);
+  }
+  if (s.slice(0, 3) == 'ID3') { return 'mp3'; }
+  if (b[0] == 0xFF && (b[1] & 0xE0) == 0xE0) { return 'mp3'; }
+  if (s.slice(4, 8) == 'ftyp') { return 'm4a'; }
+  if (s.slice(0, 4) == 'RIFF') { return 'wav'; }
+  if (s.slice(0, 4) == 'fLaC') { return 'flac'; }
+  if (s.slice(0, 4) == 'OggS') { return 'ogg'; }
+  if (s.trim().charAt(0) == '<') { return 'html'; }
+  return 'unknown';
+}
+
+function why(t){
+  var f = t.file;
+  if (t.http) { return f + ' not found in audio/ (HTTP ' + t.http + '), check the name'; }
+  if (t.kind == 'html') { return 'audio/' + f + ' gives back a web page, not music. wrong name or folder?'; }
+  if (t.kind && t.kind != 'mp3') {
+    return f + ' is really a ' + t.kind.toUpperCase() + ' file renamed to .mp3. re-export it as a real mp3';
+  }
+  return "this browser can't play " + f + '. re-export it as a normal mp3';
+}
+
+function fail(t, msg){
+  if (t.deadAt && Date.now() - t.deadAt < 2000) { return; }
+  t.deadAt = Date.now();
+  errs = errs + 1;
+  console.error('[dweeb] ' + msg);
+  fire('error', msg);
+  if (getTracks().length > 1 && errs < getTracks().length) {
+    setTimeout(function(){
+      A.load(idx + 1, want);
+    }, 700);
+  }
+}
+
+function broke(){
+  var t = A.current();
+  if (!t) { return; }
+  if (busy[t.file]) { return; }
+  if (tried[t.file]) {
+    fail(t, why(t));
+    return;
+  }
+  tried[t.file] = 1;
+  busy[t.file] = 1;
+  var mine = idx;
+
+  var req = fetch('audio/' + t.file);
+  req.then(function(r){
+    if (!r.ok) {
+      t.http = r.status;
+      throw 0;
+    }
+    return r.arrayBuffer();
+  }).then(function(ab){
+    t.kind = sniff(new Uint8Array(ab, 0, Math.min(12, ab.byteLength)));
+    blobs[t.file] = URL.createObjectURL(new Blob([ab]));
+    busy[t.file] = 0;
+    if (idx != mine) { return; }
+    el.src = blobs[t.file];
+    if (want) { A.play(); }
+  }).catch(function(){
+    busy[t.file] = 0;
+    if (idx == mine) { fail(t, why(t)); }
+  });
+}
+
+function media(t){
+  if (!navigator.mediaSession) { return; }
+  try {
+    var artist = t.artist || DW.defaultArtist || '';
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: t.title,
+      artist: artist,
+      album: t.album || '',
+      artwork: [{ src: A.cover(t), sizes: '512x512', type: 'image/png' }]
+    });
+  } catch(e) {}
+}
+
+if (navigator.mediaSession) {
+  try {
+    navigator.mediaSession.setActionHandler('play', A.play);
+    navigator.mediaSession.setActionHandler('pause', A.pause);
+    navigator.mediaSession.setActionHandler('previoustrack', A.prev);
+    navigator.mediaSession.setActionHandler('nexttrack', A.next);
+  } catch(e) {}
+}
+
+// starts music on first click
+A.arm = function(){
+  var evs = ['pointerdown', 'keydown', 'touchend'];
+  function go(){
+    for (var i = 0; i < evs.length; i++) {
+      removeEventListener(evs[i], go, true);
+    }
+    if (A.userPaused) { return; }
+    if (A.playing) { wire(); }
+    else { A.play(); }
+  }
+  for (var i = 0; i < evs.length; i++) {
+    addEventListener(evs[i], go, true);
+  }
+};
 })();
