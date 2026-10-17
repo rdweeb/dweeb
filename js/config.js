@@ -88,7 +88,11 @@ DW.playlist = {
       "[0:10] biddle-di-biddle-di-biddle-di.. I can sing guitar, impressive.",
       "[0:18] Right now, I'm looking through my photos in my old phone",
       "[0:22] They're pretty silly, so I deleted every one",
-      "[0:25] I just don't wanna see them, I just don't wanna know"
+      "[0:25] I just don't wanna see them, I just don't wanna know",
+      "[0:29] Because of every other picture, I just think about",
+      "[0:33] How could you say that to my face, knowing my reaction?",
+      "[0:40] How could you say that to my face, knowing my reaction?",
+      "[0:47] (Yeah, uh, uh)"
     ]
   }
 };
