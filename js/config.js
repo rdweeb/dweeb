@@ -101,6 +101,12 @@ DW.playlist = {
       "[1:06] You be talking shit because you'll never really know, uh",
       "[1:09] How it really feel like, got the money and the clothes, yeah",
       "[1:12] I can do whatever, on the high and on the low, yeah"
+      "[1:17] Yeah, uh, uh",
+      "[1:18] Oh yeah, yeah, yeah",
+      "[1:33] Right now I'm flying back, back to where I was from",
+      "[1:36] Don't really wanna go, but it's where I gotta go",
+      "[1:40] It's where I feel it caving, where everything is lost",
+      "[1:43] Where everything I feel is felt and there's no cover-up"
     ]
   }
 };
