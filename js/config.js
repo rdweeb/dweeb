@@ -84,7 +84,7 @@ DW.playlist = {
     lyrics: [
       "[0:01] Listen up, bro",
       "[0:02] Like listen, listen (what?)",
-      "[0:04] Fuck off",
+      "[0:04] <angry>Fuck off",
       "[0:10] biddle-di-biddle-di-biddle-di.. I can sing guitar, impressive.",
       "[0:18] Right now, I'm looking through my photos in my old phone",
       "[0:22] They're pretty silly, so I deleted every one",
