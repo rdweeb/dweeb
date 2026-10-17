@@ -100,7 +100,7 @@ DW.playlist = {
       "[1:02] Now I'm walking 'round, and I've been feeling like the G.O.A.T., ayy",
       "[1:06] You be talking shit because you'll never really know, uh",
       "[1:09] How it really feel like, got the money and the clothes, yeah",
-      "[1:12] I can do whatever, on the high and on the low, yeah"
+      "[1:12] I can do whatever, on the high and on the low, yeah",
       "[1:17] Yeah, uh, uh",
       "[1:18] Oh yeah, yeah, yeah",
       "[1:33] Right now I'm flying back, back to where I was from",
