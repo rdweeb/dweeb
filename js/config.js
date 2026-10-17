@@ -93,11 +93,11 @@ DW.playlist = {
       "[0:33] How could you say that to my face, knowing my reaction?",
       "[0:40] How could you say that to my face, knowing my reaction?",
       "[0:47] (Yeah, uh, uh)",
-      "[0:49] Now I'm walking 'round, and I've been feeling like the G.O.A.T., ayy",
+      "[0:49] Now I'm walking 'round, and I've been feeling like the G.O.A.T., uh",
       "[0:52] You be talking shit because you'll never really know, uh",
       "[0:55] How it really feel like, got the money and the clothes, yeah",
       "[0:59] I can do whatever, on the high and on the low, yeah",
-      "[1:02] Now I'm walking 'round, and I've been feeling like the G.O.A.T., ayy",
+      "[1:02] Now I'm walking 'round, and I've been feeling like the G.O.A.T., uh",
       "[1:06] You be talking shit because you'll never really know, uh",
       "[1:09] How it really feel like, got the money and the clothes, yeah",
       "[1:12] I can do whatever, on the high and on the low, yeah",
@@ -106,7 +106,23 @@ DW.playlist = {
       "[1:33] Right now I'm flying back, back to where I was from",
       "[1:36] Don't really wanna go, but it's where I gotta go",
       "[1:40] It's where I feel it caving, where everything is lost",
-      "[1:43] Where everything I feel is felt and there's no cover-up"
+      "[1:43] Where everything I feel is felt and there's no cover-up",
+      "[1:47] How could you say that to my face, knowing my reaction?",
+      "[1:54] How could you say that to my face, knowing my reaction?",
+      "[2:01] (Yeah, uh, uh)",
+      "[2:03] Now I'm walking 'round, and I've been feeling like the G.O.A.T., uh",
+      "[2:06] You be talking shit because you'll never really know, uh",
+      "[2:10] How it really feel like, got the money and the clothes, yeah",
+      "[2:13] I can do whatever, on the high and on the low, yeah",
+      "[2:16] Now I'm walking 'round, and I've been feeling like the G.O.A.T., uh",
+      "[2:20] You be talking shit because you'll never really know, uh",
+      "[2:23] How it really feel like, got the money and the clothes, yeah",
+      "[2:27] I can do whatever, on the high and on the low, yeah",
+      "[2:30] Don't you just love yourself?",
+      "[2:33] Don't you just love yourself?",
+      "[2:37] Don't you just love yourself?",
+      "[2:40] Don't you just love yourself?",
+      "[2:44] OH YEAH!!!"
     ]
   }
 };
