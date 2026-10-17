@@ -75,7 +75,8 @@ DW.playlist = {
       "[0:23] is tweaking at the party,"
     ]
   },
-  'music9.mp3': { title: 'Plastic You', artist: 'Outdate Techno', album: 'Single / 2026' }
+  'music9.mp3': { title: 'Plastic You', artist: 'Outdate Techno', album: 'Single / 2026' },
+  'music10.mp3': { title: 'Miss The Rage', artist: 'Trippie Redd, Playboi Carti', album: 'Trip At Knight / 2018' }'
 };
 DW.defaultArtist = 'Unknown Artist';
 
