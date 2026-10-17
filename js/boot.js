@@ -1,148 +1,245 @@
 (function () {
   var DW = window.DW;
-  function $(id) { return document.getElementById(id); }
+
+  function byId(id) { return document.getElementById(id); }
+
+  var WAIT_ASSET = 15000;
+  var WAIT_AUDIO = 5000;
+  var WAIT_VIDEO = 90000;
+
+  var SKIP_DELAY = 1200;
+
+  var STALL_TICKS = 8;
 
   DW.boot = function (cb) {
-    var I = DW.intro || {};
-    var b = $('boot'), vid = $('intro'), gate = $('gate'), skip = $('skip');
-    var fill = $('load-fill'), txt = $('load-txt');
-    var total = 0, done = 0, armed = false, ready = false, over = false, introURL = '', wd = 0;
+    var intro = DW.intro || {};
+    var intro2 = DW.intro2 || {};
+    var tracks = DW.tracks || [];
+
+    var screen = byId('boot');
+    var video = byId('intro');
+    var gate = byId('gate');
+    var skipBtn = byId('skip');
+    var barFill = byId('load-fill');
+    var barText = byId('load-txt');
+
+    var total = 0;
+    var done = 0;
+    var armed = false;
+    var ready = false;
+    var finished = false;
+    var videoURL = '';
+    var stallTimer = 0;
+    var skipTimer = 0;
 
     function paint() {
-      fill.style.transform = 'scaleX(' + (total ? done / total : 0).toFixed(3) + ')';
-      txt.textContent = 'Downloading ' + done + '/' + total + ' content!';
+      var pct = total ? done / total : 0;
+      barFill.style.transform = 'scaleX(' + pct.toFixed(3) + ')';
+      barText.textContent = 'Downloading ' + done + '/' + total + ' content!';
     }
 
-    function job(ms) {
-      var d = false;
+    function wait(timeout) {
+      var settled = false;
+      var timer = 0;
       total++;
-      var f = function () {
-        if (d) return;
-        d = true; done++;
-        paint(); check();
-      };
-      if (ms) setTimeout(f, ms);
-      return f;
+
+      function settle() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        done++;
+        paint();
+        maybeReady();
+      }
+
+      if (timeout) timer = setTimeout(settle, timeout);
+      return settle;
     }
 
-    [].forEach.call(document.querySelectorAll('#cats img, #top img'), function (img) {
-      var f = job(15000);
-      if (img.complete) f();
-      else { img.addEventListener('load', f); img.addEventListener('error', f); }
+    // images
+    Array.prototype.forEach.call(document.querySelectorAll('#cats img, #top img'), function (img) {
+      var settle = wait(WAIT_ASSET);
+      if (img.complete) {
+        settle();
+      } else {
+        img.addEventListener('load', settle);
+        img.addEventListener('error', settle);
+      }
     });
 
-    DW.tracks.forEach(function (t) {
-      var f = job(15000), i = new Image();
-      i.onload = i.onerror = f;
-      i.src = DW.audio.cover(t);
+    // album covers
+    tracks.forEach(function (track) {
+      var settle = wait(WAIT_ASSET);
+      var pic = new Image();
+      pic.onload = settle;
+      pic.onerror = settle;
+      pic.src = DW.audio.cover(track);
     });
 
-    if (DW.tracks.length) {
-      var fa = job(5000), el = DW.audio.el;
-      if (el.readyState >= 3) fa();
-      else {
-        el.addEventListener('canplaythrough', fa, { once: true });
-        el.addEventListener('error', fa, { once: true });
+    // first audio
+    if (tracks.length) {
+      var settleAudio = wait(WAIT_AUDIO);
+      var audioEl = DW.audio.el;
+      if (audioEl.readyState >= 3) {
+        settleAudio();
+      } else {
+        audioEl.addEventListener('canplaythrough', settleAudio, { once: true });
+        audioEl.addEventListener('error', settleAudio, { once: true });
       }
     }
 
-    var I2 = DW.intro2 || {};
-    function rare() {
-      var c = window.crypto;
-      if (!c || !c.getRandomValues) return false;
-      var q = /[?&]force2=([^&]+)/.exec(location.search);
-      if (q && I2.testKey && decodeURIComponent(q[1]) === I2.testKey) return true;
-      var odds = +I2.odds > 1 ? +I2.odds : 1e9, u = new Uint32Array(2);
-      c.getRandomValues(u);
-      return ((u[0] & 0x1FFFFF) * 4294967296 + u[1]) / 9007199254740992 < 1 / odds;
-    }
-    function grab(src, fv, fallback, rare) {
-      fetch(src)
-        .then(function (r) { if (!r.ok) throw 0; return r.blob(); })
-        .then(function (bl) { introURL = URL.createObjectURL(bl); if (rare && DW.trophy) DW.trophy.award('rare'); })
-        .catch(function () {})
-        .then(function () {
-          if (!introURL && fallback) return grab(fallback, fv);
-          fv();
-        });
-    }
-    var skipIt = !!(DW.set && DW.set.get('skipIntro'));
-    if ((I.src || I2.src) && !skipIt) {
-      var fv = job(90000), lucky = rare();
-      try { if (lucky) localStorage.setItem('dw-intro2', String((+localStorage.getItem('dw-intro2') || 0) + 1)); } catch (e) {}
-      if (lucky) grab(I2.src || 'video/intro2.mp4', fv, I.src, true);
-      else if (I.src) grab(I.src, fv);
-      else fv();
+    // ---- intro video ----
+    // chance for rare video
+    function rollRare() {
+      var rng = window.crypto;
+      if (!rng || !rng.getRandomValues) return false;
+
+      var forced = /[?&]force2=([^&]+)/.exec(location.search);
+      if (forced && intro2.testKey) {
+        try {
+          if (decodeURIComponent(forced[1]) === intro2.testKey) return true;
+        } catch (e) {}
+      }
+
+      var odds = +intro2.odds > 1 ? +intro2.odds : 1e9;
+      var r = new Uint32Array(2);
+      rng.getRandomValues(r);
+      var n = (r[0] & 0x1FFFFF) * 4294967296 + r[1];
+      return n / 9007199254740992 < 1 / odds;
     }
 
-    function check() {
+    // vidoe blob url
+    function fetchVideo(src) {
+      return fetch(src)
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.blob();
+        })
+        .then(function (blob) { return URL.createObjectURL(blob); })
+        .catch(function () { return ''; });
+    }
+
+    function gotRare() {
+      if (DW.trophy) DW.trophy.award('rare');
+      try {
+        var n = +localStorage.getItem('dw-intro2') || 0;
+        localStorage.setItem('dw-intro2', String(n + 1));
+      } catch (e) { /* storage blocked */ }
+    }
+
+    function loadIntro() {
+      var settle = wait(WAIT_VIDEO);
+      var lucky = rollRare();
+      var firstChoice = lucky ? (intro2.src || 'video/intro2.mp4') : intro.src;
+
+      (firstChoice ? fetchVideo(firstChoice) : Promise.resolve(''))
+        .then(function (url) {
+          if (url) {
+            if (lucky) gotRare();
+            return url;
+          }
+          return (lucky && intro.src) ? fetchVideo(intro.src) : '';
+        })
+        .then(function (url) {
+          if (ready) {
+            if (url) URL.revokeObjectURL(url);
+            return;
+          }
+          videoURL = url;
+          settle();
+        });
+    }
+
+    var skipSetting = !!(DW.set && DW.set.get('skipIntro'));
+    if ((intro.src || intro2.src) && !skipSetting) loadIntro();
+
+    // ---- flow ----
+    function maybeReady() {
       if (!armed || ready || done < total) return;
       ready = true;
-      txt.textContent = 'Download complete!';
+      barText.textContent = 'Download complete!';
       setTimeout(afterDownload, 500);
     }
 
     function afterDownload() {
-      if (!introURL) return finish();
-      if (!I.gate) return play(false);
-      gate.hidden = false;
-      var evs = ['pointerup', 'touchend', 'click', 'keydown'];
-      function go() {
-        evs.forEach(function (e) { removeEventListener(e, go, true); });
+      if (!videoURL) return finish();
+      if (!intro.gate) return play(false);
+
+      // waiting for a tap/key first
+      var events = ['pointerup', 'touchend', 'click', 'keydown'];
+      function onGesture() {
+        events.forEach(function (name) { removeEventListener(name, onGesture, true); });
         play(true);
       }
-      evs.forEach(function (e) { addEventListener(e, go, true); });
+      gate.hidden = false;
+      events.forEach(function (name) { addEventListener(name, onGesture, true); });
     }
 
-    function play(gesture) {
-      if (gesture && DW.audio.unlock) DW.audio.unlock();
+    function play(fromGesture) {
+      if (fromGesture && DW.audio.unlock) DW.audio.unlock();
       gate.hidden = true;
-      $('dl').hidden = true;
-      vid.src = introURL;
-      vid.hidden = false;
-      vid.muted = false;
-      vid.addEventListener('ended', finish);
-      vid.addEventListener('error', finish);
-      var p = vid.play();
-      if (p && p.catch) p.catch(function () {
-        vid.muted = true;
-        vid.play().catch(finish);
-      });
+      byId('dl').hidden = true;
 
-      if (I.skip) {
-        skip.hidden = false;
-        setTimeout(function () {
-          addEventListener('pointerdown', finish, true);
-          addEventListener('keydown', finish, true);
-        }, 1200);
+      video.src = videoURL;
+      video.hidden = false;
+      video.muted = false;
+      video.addEventListener('ended', finish);
+      video.addEventListener('error', finish);
+
+      var started = video.play();
+      if (started && started.catch) {
+        started.catch(function () {
+          // if autoplay sound was blocked
+          video.muted = true;
+          video.play().catch(finish);
+        });
       }
 
-      var last = -1, still = 0;
-      wd = setInterval(function () {
-        if (vid.currentTime === last) still++; else still = 0;
-        last = vid.currentTime;
-        if (still >= 8) finish();
+      if (intro.skip) {
+        skipBtn.hidden = false;
+        skipTimer = setTimeout(function () {
+          addEventListener('pointerdown', finish, true);
+          addEventListener('keydown', finish, true);
+        }, SKIP_DELAY);
+      }
+
+      // watchdog holy shit thats a cool name
+      var lastTime = -1;
+      var stuck = 0;
+      stallTimer = setInterval(function () {
+        stuck = (video.currentTime === lastTime) ? stuck + 1 : 0;
+        lastTime = video.currentTime;
+        if (stuck >= STALL_TICKS) finish();
       }, 1000);
     }
 
     function finish() {
-      if (over) return;
-      over = true;
-      clearInterval(wd);
+      if (finished) return;
+      finished = true;
+
+      clearInterval(stallTimer);
+      clearTimeout(skipTimer);
       removeEventListener('pointerdown', finish, true);
       removeEventListener('keydown', finish, true);
-      b.classList.add('gone');
+
+      screen.classList.add('gone');
       cb();
+
+      // cool fade out
       setTimeout(function () {
-        b.classList.add('dead');
-        try { vid.pause(); vid.removeAttribute('src'); vid.load(); vid.remove(); } catch (e) {}
-        if (introURL) URL.revokeObjectURL(introURL);
+        screen.classList.add('dead');
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+          video.remove();
+        } catch (e) { /* already gone */ }
+        if (videoURL) URL.revokeObjectURL(videoURL);
       }, 1200);
     }
 
     paint();
     armed = true;
-    check();
+    maybeReady();
   };
 })();
-
