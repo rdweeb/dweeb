@@ -76,7 +76,10 @@ DW.playlist = {
     ]
   },
   'music9.mp3': { title: 'Plastic You', artist: 'Outdate Techno', album: 'Single / 2026' },
-  'music10.mp3': { title: 'Miss The Rage', artist: 'Trippie Redd, Playboi Carti', album: 'Trip At Knight / 2018' }
+  'music10.mp3': { title: 'Miss The Rage', artist: 'Trippie Redd, Playboi Carti', album: 'Trip At Knight / 2018' },
+  'music11.mp3': { title: 'In Life Im in Love', artist: 'Reserv', album: 'In Life Im in Love / 2023' },
+  'music12.mp3': { title: 'serialkilled'. artist: 'Osquinn', album: 'Single / 2019' },
+  
 };
 DW.defaultArtist = 'Unknown Artist';
 
