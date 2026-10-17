@@ -92,7 +92,15 @@ DW.playlist = {
       "[0:29] Because of every other picture, I just think about",
       "[0:33] How could you say that to my face, knowing my reaction?",
       "[0:40] How could you say that to my face, knowing my reaction?",
-      "[0:47] (Yeah, uh, uh)"
+      "[0:47] (Yeah, uh, uh)",
+      "[0:49] Now I'm walking 'round, and I've been feeling like the G.O.A.T., ayy",
+      "[0:52] You be talking shit because you'll never really know, uh",
+      "[0:55] How it really feel like, got the money and the clothes, yeah",
+      "[0:59] I can do whatever, on the high and on the low, yeah",
+      "[1:02] Now I'm walking 'round, and I've been feeling like the G.O.A.T., ayy",
+      "[1:06] You be talking shit because you'll never really know, uh",
+      "[1:09] How it really feel like, got the money and the clothes, yeah",
+      "[1:12] I can do whatever, on the high and on the low, yeah"
     ]
   }
 };
