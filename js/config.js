@@ -78,7 +78,19 @@ DW.playlist = {
   'music9.mp3': { title: 'Plastic You', artist: 'Outdate Techno', album: 'Single / 2026' },
   'music10.mp3': { title: 'Miss The Rage', artist: 'Trippie Redd, Playboi Carti', album: 'Trip At Knight / 2018' },
   'music11.mp3': { title: 'In Life Im in Love', artist: 'Reserv', album: 'In Life Im in Love / 2023' },
-  'music12.mp3': { title: 'serialkilled', artist: 'Osquinn', album: 'Single / 2019' }
+  'music12.mp3': { title: 'serialkilled', artist: 'Osquinn', album: 'Single / 2019' },
+  'music13.mp3': { 
+    title: 'love urself', artist: 'Kurtains', album: 'the songs i sing at night / 2022',
+    lyrics: [
+      "[0:01] Listen up, bro",
+      "[0:02] Like listen, listen (what?)",
+      "[0:04] Fuck off",
+      "[0:10] biddle-di-biddle-di-biddle-di.. I can sing guitar, impressive.",
+      "[0:18] Right now, I'm looking through my photos in my old phone",
+      "[0:22] They're pretty silly, so I deleted every one",
+      "[0:25] I just don't wanna see them, I just don't wanna know"
+    ]
+  }
 };
 DW.defaultArtist = 'Unknown Artist';
 
