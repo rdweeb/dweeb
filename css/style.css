@@ -1,3 +1,4 @@
+/* hii since my project's license is MIT and people will probably use my stuff I tried explaining my code, I'm but no means a good coder, but I tried!! */
 /* variables */
 :root {
   /* colours */
@@ -958,8 +959,7 @@ input[type=range]::-moz-range-thumb {
 }
 
 
-/* ---------- boot screen (loading bar + intro video) ---------- */
-
+/* boot screen */
 #boot {
   position: fixed;
   inset: 0;
@@ -1061,7 +1061,7 @@ input[type=range]::-moz-range-thumb {
   text-shadow: 1px 1px 0 #000000;
 }
 
-/* "tap to start" text. fades to a quarter, not all the way (the caret below fades fully) */
+/* tap to start text */
 #gate {
   position: absolute;
   left: 0;
@@ -1089,16 +1089,15 @@ input[type=range]::-moz-range-thumb {
 }
 
 
-/* ---------- light / reduced modes ---------- */
-
-/* lighter on slow phones (settings.js adds html.low) */
+/* light / reduced modes */
+/* lighter on slow phones */
 html.low .w2,
 html.low .w3,
 html.low #bg::after { display: none; }
 html.low .cat.act .fl { animation: none; }
 html.low #player.playing { box-shadow: 0 0 0 1px var(--ink), 4px 4px 0 rgba(117, 9, 154, .55); }
 
-/* reduced motion (util.js adds html.reduce) */
+/* reduced motion */
 html.reduce .cat.act .fl,
 html.reduce .lico i,
 html.reduce .lico b,
@@ -1108,13 +1107,11 @@ html.reduce .gh-wrap,
 html.reduce .gh,
 html.reduce .big-heart,
 html.reduce .ny-banner { animation: none; }
-/* the jumpscare flashes white several times a second, so calm it right down */
 html.reduce .scare,
 html.reduce .scare-img { animation: none; }
 
 
-/* ---------- screen sizes ---------- */
-
+/* screen sizes */
 /* phone in portrait */
 @media (max-width: 700px) and (orientation: portrait) {
   :root {
@@ -1152,7 +1149,7 @@ html.reduce .scare-img { animation: none; }
   .subs { top: calc(var(--cico) + 50px); }
 }
 
-/* short screens (phone on its side) */
+/* short screen */
 @media (max-height: 520px) {
   :root {
     --cico: 46px;
@@ -1188,8 +1185,7 @@ html.reduce .scare-img { animation: none; }
 }
 
 
-/* ---------- the chat bot line ---------- */
-
+/* the chat bot line */
 #splash {
   position: absolute;
   z-index: 3;
@@ -1223,7 +1219,7 @@ html.reduce .scare-img { animation: none; }
 #splash.sing #sp-txt::after { content: '  \266A'; }
 #splash.scold { color: #fbb3ff; }
 
-/* blinking cursor while it types (also used for the changelog dot) */
+/* blinking cursor */
 #splash.caret #sp-txt::after {
   content: '_';
   animation: blink .8s steps(1) infinite;
@@ -1246,8 +1242,7 @@ html.reduce .scare-img { animation: none; }
 }
 
 
-/* ---------- top bar icon buttons ---------- */
-
+/* top bar icon buttons */
 .tr-ic {
   width: 14px;
   height: 14px;
@@ -1255,7 +1250,7 @@ html.reduce .scare-img { animation: none; }
   flex: none;
   object-fit: contain;
 }
-/* phones: icon only, the text label goes away */
+/* phones = icon only and the text label goes away */
 @media (max-width: 700px) {
   #status > .tbtn span { display: none; }
   #clock { display: none !important; }
@@ -1278,8 +1273,7 @@ html.reduce .scare-img { animation: none; }
 }
 
 
-/* ---------- shared window pieces ---------- */
-
+/* shared window pieces */
 .tab-go {
   padding: 3px 10px;
   font: bold 10px var(--font);
@@ -1348,8 +1342,7 @@ html.reduce .scare-img { animation: none; }
 }
 
 
-/* ---------- trophies ---------- */
-
+/* trophies */
 .tr-sum {
   font: bold 11px var(--font);
   letter-spacing: .14em;
@@ -1494,8 +1487,7 @@ html.reduce .scare-img { animation: none; }
 }
 
 
-/* ---------- games ---------- */
-
+/* games */
 .gm-menu {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -1581,7 +1573,7 @@ html.reduce .scare-img { animation: none; }
   touch-action: none;
 }
 
-/* the start / pause / game over box over the canvas, and the rhythm menus */
+/* the start / pause / game menu box over the canvas */
 .gm-ov,
 .gm-layer {
   position: absolute;
@@ -1681,7 +1673,7 @@ html.reduce .scare-img { animation: none; }
   white-space: nowrap;
 }
 
-/* on-screen buttons, only on touch screens */
+/* on screen buttons but only on touch screens */
 .gm-pad {
   display: none;
   justify-content: center;
@@ -1757,8 +1749,7 @@ body.gaming #player { z-index: 26; }
 }
 
 
-/* ---------- eyes pet ---------- */
-
+/* eyes pet */
 #pet {
   display: block;
   height: 18px;
@@ -1770,7 +1761,7 @@ body.gaming #player { z-index: 26; }
 #views-wrap.pet #eyes { display: none; }
 #views-wrap.pet { cursor: pointer; }
 
-/* little <3 that floats up when you pet it (and from the valentine heart) */
+/* the little <3 that appears up when you pet it (and from the valentine heart) */
 .hearts {
   position: fixed;
   z-index: 60;
@@ -1786,8 +1777,7 @@ body.gaming #player { z-index: 26; }
 }
 
 
-/* ---------- christmas lights on the top bar ---------- */
-
+/* christmas lights on the top bar */
 body.s-xmas #top::after,
 body.s-xmas #top::before {
   content: '';
@@ -1815,8 +1805,7 @@ body.s-xmas #top::after {
 }
 
 
-/* ---------- emotion text (the chat bot's feelings) ---------- */
-
+/* emotion text (the chat bot's feelings) */
 .em { display: inline; }
 .em-w {
   display: inline-block;
@@ -2025,7 +2014,7 @@ body.s-xmas #top::after {
 html.reduce .em-c { animation: none; }
 
 
-/* ---------- seasonal decorations (built by seasonfx.js) ---------- */
+/* seasonal decorations */
 
 #sfx {
   position: absolute;
@@ -2049,7 +2038,7 @@ body.gaming #sfx { visibility: hidden; }
 .web.bl { left: 0; bottom: 0; transform: scaleY(-1); }
 .web.br { right: 0; bottom: 0; transform: scale(-1, -1); }
 
-/* a web in the corner of the player and the windows too */
+/* a web in the corner of the musik player */
 body.s-halloween #player::after,
 body.s-halloween .win::after {
   content: '';
@@ -2177,7 +2166,7 @@ body.s-halloween #player { overflow: visible; }
   50% { transform: translateY(8px); }
 }
 
-/* the little note under the top right web */
+/* the little note */
 .web-note {
   position: absolute;
   right: 8px;
@@ -2190,7 +2179,7 @@ body.s-halloween #player { overflow: visible; }
   pointer-events: none;
 }
 
-/* christmas (pictures come from the seasons folder) */
+/* christmas (i still have to make the tree.png set) */
 .tree-wrap {
   position: absolute;
   left: calc(16px + env(safe-area-inset-left));
@@ -2296,7 +2285,7 @@ body.s-xmas #player::before {
 }
 
 
-/* ---------- changelog ---------- */
+/* changelog */
 
 .cl-entry + .cl-entry {
   margin-top: 16px;
@@ -2318,7 +2307,7 @@ body.s-xmas #player::before {
 }
 .cl-list li { margin: 3px 0; }
 
-/* yellow dot on the button when theres something new */
+/* yellow thingy on the button when theres something new */
 #b-log.fresh { position: relative; }
 #b-log.fresh::after {
   content: '';
@@ -2341,8 +2330,7 @@ body[class*="s-"] #sysname small {
 }
 
 
-/* ---------- little secrets ---------- */
-
+/* little secrets */
 .egg-spin { animation: egg-spin 1.3s ease-in-out; }
 @keyframes egg-spin {
   from { transform: rotate(0); }
@@ -2350,8 +2338,7 @@ body[class*="s-"] #sysname small {
 }
 
 
-/* ---------- settings window ---------- */
-
+/* settings window */
 /* on phones, buttons without an icon still show a short label */
 @media (max-width: 700px) {
   #status > .tbtn.noic span {
@@ -2525,7 +2512,7 @@ body[class*="s-"] #sysname small {
   box-shadow: 0 0 0 1px var(--ink);
 }
 
-/* "some changes apply after a refresh" */
+/* some changes apply after a refresh */
 .set-note {
   display: flex;
   align-items: center;
@@ -2566,8 +2553,7 @@ body[class*="s-"] #sysname small {
 }
 
 
-/* ---------- phones: windows follow the visible screen height ---------- */
-
+/* phones: windows follow the visible screen height */
 /* 100vh counts the area behind the phone's address bar, dvh doesnt */
 @supports (height: 100dvh) {
   .win { max-height: min(78dvh, 640px); }
