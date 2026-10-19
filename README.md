@@ -28,7 +28,7 @@ say if you made changes. please don't imply that RDweeb endorses you or your wor
 - [Read the license summary](https://creativecommons.org/licenses/by/4.0/)
 - [Read the full legal code](https://creativecommons.org/licenses/by/4.0/legalcode)
 
-this license only covers material that RDweeb has the right to license. Third-party
+this license only covers material that I made and have the right to license. Third-party
 artwork, music, video, fonts, libraries, and other assets may have separate terms.
 check their individual notices before reusing them.
 
