@@ -13,11 +13,29 @@ accidentally breaking the player, games, settings or secrets.
 the short version: start with `js/config.js` for the stuff you are meant to change,
 then read the matching feature file before changing how it works.
 
+## license
+
+the original code and other original material in this project by RDweeb are
+licensed under the **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
+
+you can use, copy, remix, modify, redistribute, and use the covered material
+commercially, as long as you give appropriate credit, link to the license, and
+say if you made changes. please don't imply that RDweeb endorses you or your work.
+
+**Suggested credit:**
+`Made by RDweeb (https://rdweeb.xyz/), licensed under CC BY 4.0`
+
+- [Read the license summary](https://creativecommons.org/licenses/by/4.0/)
+- [Read the full legal code](https://creativecommons.org/licenses/by/4.0/legalcode)
+
+this license only covers material that RDweeb has the right to license. Third-party
+artwork, music, video, fonts, libraries, and other assets may have separate terms.
+check their individual notices before reusing them.
+
 ## can i use this for my own site?
 
 yes, honestly please do. if you like how it is put together, take the structure and make it yours.
 
-- the code is MIT licensed (read `LICENSE`, it is short). use it, change it, build something else out of it, even sell it. just keep the copyright line in the license file
 - a little credit or a link back to rdweeb.xyz would make my day, but you do not have to
 - you can see how everything works in the code, i tried to keep the settings in `js/config.js` so you do not have to dig around much but this is my first time coding an actual site, so it might suck
 
@@ -47,4 +65,3 @@ missing pictures just show up as nothing instead of breaking, so you can start s
 
 contact me on discord by using rdweeb, or find more contact info on rdweeb.xyz. be nice to the chat bot, it is trying its best.
 
-copyright (c) 2026 RDweeb. code under the MIT license. everything else, all rights reserved.
