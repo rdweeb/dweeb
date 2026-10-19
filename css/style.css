@@ -1,4 +1,3 @@
-/* hii since my project's license is MIT and people will probably use my stuff I tried explaining my code, I'm but no means a good coder, but I tried!! */
 /* variables */
 :root {
   /* colours */
@@ -13,9 +12,9 @@
   --txt: #fdeeff;
   --dim: #e8bdf2;
   --gold: #ffd34d;
-  --p: 0;  /* the beat pulse */
+  --p: 0;  /* the visualizer sets this its the uhh beat pulse */
 
-  /* the chunky windows 98 look used by every button and stuff */
+  /* the chunky old UI look */
   --bevel-out: var(--hi) var(--lo) var(--lo) var(--hi);
   --bevel-in: #6c078a #d863ed #d863ed #6c078a;
   --bevel-down: var(--lo) var(--hi) var(--hi) var(--lo);
@@ -33,7 +32,7 @@
   --cw: clamp(92px, 14vw, 170px);
   --ry: clamp(70px, 16vh, 170px);
   --ax: calc(24vw - var(--cw) / 2);
-  --maxd: 4;
+  --maxd: 4;  /* how many links show under the selected one */
 
   --font: Tahoma, Verdana, Geneva, "DejaVu Sans", sans-serif;
   --mono: "Lucida Console", Consolas, "DejaVu Sans Mono", "Courier New", monospace;
@@ -79,7 +78,8 @@ button {
   cursor: pointer;
 }
 
-/* keyboard users get a visible outline (mouse clicks dont) */
+/* keyboard users get a visible outline its kind of like that one roblox thing */
+/* heh ball knowledge i think */
 button:focus-visible,
 input[type=range]:focus-visible {
   outline: 2px dashed #ffffff;
@@ -94,7 +94,7 @@ input[type=range]:focus-visible {
   scrollbar-color: var(--p3) var(--ink);
 }
 
-/* shown */
+/* shown by the <noscript> tag */
 .ns {
   position: fixed;
   inset: 0;
@@ -106,7 +106,7 @@ input[type=range]:focus-visible {
   letter-spacing: .1em;
 }
 
-/* files missing from main.js */
+/* "files missing" banner from main.js */
 #warn {
   position: fixed;
   left: 50%;
@@ -125,7 +125,7 @@ input[type=range]:focus-visible {
   box-shadow: 0 0 0 1px #9f17c7, 3px 3px 0 rgba(0, 0, 0, .5);
 }
 
-/* the debug box */
+/* the ?debug box */
 #dbg {
   position: fixed;
   left: 8px;
@@ -308,7 +308,7 @@ input[type=range]:focus-visible {
   transform: scaleY(.18);
 }
 
-/* buttons the js adds to the top bar so like games and stuff */
+/* buttons the js adds to the top bar */
 #status > .tbtn {
   gap: 5px;
   cursor: pointer;
@@ -349,7 +349,7 @@ input[type=range]:focus-visible {
   height: 0;
 }
 
-/* one category. navigation.js sets --d (how far from the selected one) and --o (opacity) */
+/* one category */
 .cat {
   position: absolute;
   left: 0;
@@ -421,7 +421,7 @@ input[type=range]:focus-visible {
   letter-spacing: .1em;
 }
 
-/* the list under a category */
+/* the list of subs under a category */
 .subs {
   position: absolute;
   left: 0;
@@ -464,7 +464,7 @@ input[type=range]:focus-visible {
 .sub.go .sub-ico { animation: launch .5s steps(6); }
 @keyframes launch { 40% { transform: scale(1.65); } }
 
-/* the name hides */
+/* the name starts hidden behind its icon and slides out */
 .sub-name {
   position: absolute;
   z-index: 1;
@@ -506,7 +506,7 @@ input[type=range]:focus-visible {
   .sub:hover .sub-name { color: #ffffff; }
 }
 
-/* use the arrow keys hine */
+/* use the arrow keys hint */
 #hint {
   position: absolute;
   z-index: 4;
@@ -534,7 +534,7 @@ input[type=range]:focus-visible {
   border-color: var(--bevel-out);
   box-shadow: 0 0 0 1px var(--ink);
 }
-/* keyboard hints on desktop and touch hints on phones */
+/* keyboard hints on desktop touch hints on phones */
 @media (hover: none) { .kb { display: none; } }
 @media (hover: hover) { .tc { display: none; } }
 
@@ -1061,7 +1061,7 @@ input[type=range]::-moz-range-thumb {
   text-shadow: 1px 1px 0 #000000;
 }
 
-/* tap to start text */
+/* "tap to start" text */
 #gate {
   position: absolute;
   left: 0;
@@ -1149,7 +1149,7 @@ html.reduce .scare-img { animation: none; }
   .subs { top: calc(var(--cico) + 50px); }
 }
 
-/* short screen */
+/* short screens */
 @media (max-height: 520px) {
   :root {
     --cico: 46px;
@@ -1219,7 +1219,7 @@ html.reduce .scare-img { animation: none; }
 #splash.sing #sp-txt::after { content: '  \266A'; }
 #splash.scold { color: #fbb3ff; }
 
-/* blinking cursor */
+/* cursor */
 #splash.caret #sp-txt::after {
   content: '_';
   animation: blink .8s steps(1) infinite;
@@ -1250,7 +1250,7 @@ html.reduce .scare-img { animation: none; }
   flex: none;
   object-fit: contain;
 }
-/* phones = icon only and the text label goes away */
+/* phones are icon only, the text label goes away */
 @media (max-width: 700px) {
   #status > .tbtn span { display: none; }
   #clock { display: none !important; }
@@ -1573,7 +1573,7 @@ html.reduce .scare-img { animation: none; }
   touch-action: none;
 }
 
-/* the start / pause / game menu box over the canvas */
+/* the start / pause / game over box over the canvas, and the rhythm menus */
 .gm-ov,
 .gm-layer {
   position: absolute;
@@ -1673,7 +1673,7 @@ html.reduce .scare-img { animation: none; }
   white-space: nowrap;
 }
 
-/* on screen buttons but only on touch screens */
+/* on screen buttons, only on touch screens */
 .gm-pad {
   display: none;
   justify-content: center;
@@ -1687,7 +1687,6 @@ html.reduce .scare-img { animation: none; }
 }
 .gm-pb {
   flex: 1;
-  min-width: 0;
   max-width: 64px;
   height: 44px;
   font: bold 14px var(--font);
@@ -1700,6 +1699,7 @@ html.reduce .scare-img { animation: none; }
   box-shadow: 0 0 0 1px var(--ink);
 }
 .gm-pb:active { border-color: var(--bevel-down); }
+.gm-pad .gm-pb { min-width: 0; }
 
 .gm-help {
   margin-top: 8px;
@@ -1708,7 +1708,7 @@ html.reduce .scare-img { animation: none; }
   text-align: center;
 }
 
-/* while a game is open, hide the menu stuff behind it and go fullscreen */
+/* while a game is open hide the menu stuff behind it and go fullscreen */
 body.gaming #bg,
 body.gaming #fx,
 body.gaming #xmb,
@@ -1761,7 +1761,7 @@ body.gaming #player { z-index: 26; }
 #views-wrap.pet #eyes { display: none; }
 #views-wrap.pet { cursor: pointer; }
 
-/* the little <3 that appears up when you pet it (and from the valentine heart) */
+/* little <3 that floats up when you pet it is also at valentine heart */
 .hearts {
   position: fixed;
   z-index: 60;
@@ -1805,7 +1805,7 @@ body.s-xmas #top::after {
 }
 
 
-/* emotion text (the chat bot's feelings) */
+/* emotion text */
 .em { display: inline; }
 .em-w {
   display: inline-block;
@@ -2015,7 +2015,6 @@ html.reduce .em-c { animation: none; }
 
 
 /* seasonal decorations */
-
 #sfx {
   position: absolute;
   inset: 0;
@@ -2038,7 +2037,7 @@ body.gaming #sfx { visibility: hidden; }
 .web.bl { left: 0; bottom: 0; transform: scaleY(-1); }
 .web.br { right: 0; bottom: 0; transform: scale(-1, -1); }
 
-/* a web in the corner of the musik player */
+/* a web in the corner of the player */
 body.s-halloween #player::after,
 body.s-halloween .win::after {
   content: '';
@@ -2166,7 +2165,7 @@ body.s-halloween #player { overflow: visible; }
   50% { transform: translateY(8px); }
 }
 
-/* the little note */
+/* the little note under the top right web */
 .web-note {
   position: absolute;
   right: 8px;
@@ -2179,7 +2178,7 @@ body.s-halloween #player { overflow: visible; }
   pointer-events: none;
 }
 
-/* christmas (i still have to make the tree.png set) */
+/* christmas (add tree.png later) */
 .tree-wrap {
   position: absolute;
   left: calc(16px + env(safe-area-inset-left));
@@ -2286,7 +2285,6 @@ body.s-xmas #player::before {
 
 
 /* changelog */
-
 .cl-entry + .cl-entry {
   margin-top: 16px;
   padding-top: 12px;
@@ -2307,7 +2305,7 @@ body.s-xmas #player::before {
 }
 .cl-list li { margin: 3px 0; }
 
-/* yellow thingy on the button when theres something new */
+/* yellow dot on the button when theres something new */
 #b-log.fresh { position: relative; }
 #b-log.fresh::after {
   content: '';
@@ -2339,7 +2337,7 @@ body[class*="s-"] #sysname small {
 
 
 /* settings window */
-/* on phones, buttons without an icon still show a short label */
+/* on phones buttons without an icon still show a short label ill probably never assign them icons cause im too lazy */
 @media (max-width: 700px) {
   #status > .tbtn.noic span {
     display: inline;
@@ -2553,8 +2551,7 @@ body[class*="s-"] #sysname small {
 }
 
 
-/* phones: windows follow the visible screen height */
-/* 100vh counts the area behind the phone's address bar, dvh doesnt */
+/* 100vh counts the area behind the phone's address bar dvh doesnt */
 @supports (height: 100dvh) {
   .win { max-height: min(78dvh, 640px); }
   #tracklist { max-height: 38dvh; }
