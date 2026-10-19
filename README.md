@@ -44,7 +44,6 @@ yes, honestly please do. if you like how it is put together, take the structure 
 the code is yours to borrow. the stuff that makes it *mine* is not:
 
 - **the name and branding.** DWEEB RECORDS, DWEEB//OS and RDweeb are me. please do not use them for your own site, your own project or your own domain, and please do not pretend to be me (unless you really really like my work)
-- **the art.** icons, covers, season pictures, videos and sounds are not in the license and are not in this repo for taking. make your own, it is the fun part
 - **the music.** every song on the playlist belongs to the artist who made it. i only show them with credit, as a playlist of stuff i like. do not rip them. if you are an artist on there and want your song gone, tell me and I will make it gone, no hard feelings
   
 ## privacy
