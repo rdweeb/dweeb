@@ -4,6 +4,15 @@ hi!! this is the source code for [rdweeb.xyz](https://rdweeb.xyz), my little web
 
 it is a plain static site so that means no build step, no framework, no backend you, yes you can put the files on GitHub Pages and it runs.
 
+## finding your way around the code
+
+the longer developer notes are in [`DEVELOPING.md`](DEVELOPING.md). they explain
+which file does what, why script order matters, and how to make changes without
+accidentally breaking the player, games, settings or secrets.
+
+the short version: start with `js/config.js` for the stuff you are meant to change,
+then read the matching feature file before changing how it works.
+
 ## can i use this for my own site?
 
 yes, honestly please do. if you like how it is put together, take the structure and make it yours.
