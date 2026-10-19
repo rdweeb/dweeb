@@ -36,7 +36,7 @@ check their individual notices before reusing them.
 
 yes, honestly please do. if you like how it is put together, take the structure and make it yours.
 
-- a little credit or a link back to rdweeb.xyz would make my day, but you do not have to
+- a little credit or a link back to rdweeb.xyz would make my day, and is required by the license
 - you can see how everything works in the code, i tried to keep the settings in `js/config.js` so you do not have to dig around much but this is my first time coding an actual site, so it might suck
 
 ## what is not free to take
