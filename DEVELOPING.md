@@ -18,32 +18,32 @@ is no required build step for normal development.
 If Python is installed, run `python -m http.server 8000` from this folder and open
 `http://localhost:8000`.
 
-## Where things live
+## Where things are
 
 | File or folder | What it is for |
 | --- | --- |
 | `index.html` | Main page markup and the script loading order |
 | `css/style.css` | Layout, visual design, animations, and responsive rules |
-| `js/config.js` | Main customization point: identity, menu, playlist, and feature settings |
+| `js/config.js` | Main customization point so like identity, menu, playlist, and feature settings |
 | `js/settings.js` | User preferences and saving/loading those preferences |
 | `js/util.js` | Shared helper functions |
-| `js/audio.js` | Audio playback and audio-analysis setup |
-| `js/visualizer.js` | Music-reactive effects |
+| `js/audio.js` | Audio playback and audio analysis setup |
+| `js/visualizer.js` | Music reactive effects |
 | `js/tuning.js` | Values controlling how strongly things react to music |
 | `js/navigation.js` | Category and subcategory menu |
-| `js/player.js` | Music-player controls and display |
+| `js/player.js` | Music player controls and display |
 | `js/games.js` | Shared game setup and helpers |
 | `js/games-arcade.js` | Arcade games |
 | `js/games-rhythm.js` | Rhythm game |
 | `js/store.js` | Local save data |
 | `js/trophies.js` | Achievement display and unlock behavior |
-| `js/seasons.js` | Calendar-based seasonal content |
+| `js/seasons.js` | Calendar based seasonal content |
 | `js/seasonfx.js` | Seasonal visual decorations |
 | `js/changelog.js` | Changelog window and unread-update indicator |
 | `js/eggs.js` | Easter eggs and hidden interactions |
 | `js/pet.js` | Visitor/pet interaction |
 | `js/emotion.js` | Chatbot emotion behavior |
-| `js/splash.js` | Chatbot/splash-text interface |
+| `js/splash.js` | Chatbot interface |
 | `js/particles.js` | Background particles |
 | `js/boot.js` | Intro/loading sequence |
 | `js/main.js` | Starts features and handles setup errors |
