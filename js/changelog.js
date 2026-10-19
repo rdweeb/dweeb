@@ -1,14 +1,10 @@
 (function () {
   var DW = window.DW;
   var Changelog = (DW.changelog = {});
-
-  // ---------------------------------------------------------------
-  // Changelog entries. Newest goes FIRST: the first entry's version
-  // decides whether the CHANGELOG button shows the "fresh" glow.
-  // ---------------------------------------------------------------
+  // wow changelog
   Changelog.entries = [
     {
-      version: '1.0.1',
+      version: '1.1',
       date: '17 OCT 2026',
       title: 'Known issues, fixing them now',
       items: [
@@ -35,11 +31,7 @@
       ]
     }
   ];
-
-  // ---------------------------------------------------------------
   // Small helpers
-  // ---------------------------------------------------------------
-
   // Make an element with an optional class and text.
   function makeEl(tag, className, text) {
     var node = document.createElement(tag);
@@ -47,7 +39,6 @@
     if (text !== undefined) node.textContent = text;
     return node;
   }
-
   // Remember which version the visitor last opened.
   // localStorage can throw (private mode, blocked storage), so wrap it.
   var SEEN_KEY = 'dw-cl-seen';
