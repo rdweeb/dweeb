@@ -1,4 +1,4 @@
-// Main customization point: identity, menu content, playlist, and feature settings.
+// main customization
 
 window.DW = window.DW || {};
 var DW = window.DW;
