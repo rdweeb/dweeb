@@ -22,6 +22,13 @@ DW.icons = { games: 'icons/games.png', trophies: '', changelog: '', settings: ''
 
 DW.eggs = { birthday: { m: 7, d: 1 } };
 
+DW.links = {
+  contact: 'https://rdweeb.github.io/contact/',
+  discord: '',
+  youtube: '',
+  music: ''
+};
+
 DW.menu = [
   { id: 'identity', subs: { bio: '', manifesto: '', persona: '' } },
   { id: 'projects', subs: { portfolio: '', archive: '', stack: '' } },
