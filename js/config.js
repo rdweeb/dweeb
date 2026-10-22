@@ -50,8 +50,7 @@ DW.playlist = {
     lyrics: [
       "[0:09] Oh yeah, I got the beats and the jams... wait..",
       "[0:14] I swear ISSBROKIE sings here...",
-      "[0:18] Maybe its an extended version",
-      "[0:40] Nope. Don't think its extended."
+      "[0:18] Maybe its an extended version"
     ]
   },
   'music2.mp3': { title: 'DANCE', artist: 'RomancePlanet', album: 'Single / 2024' },
@@ -62,7 +61,7 @@ DW.playlist = {
       "[0:16] The smell of burning flesh and sweat and chlorine..",
       "[0:20] I feel like heavy eyes and beep and smokescreens",
       "[0:23] I feel like telling lies and love and morphine",
-      "[0:27] Hell yeah I love Lil Soda Boi!"
+      "[0:27] I love Lil Soda Boi!"
     ]
   },
   'music4.mp3': { title: 'tbh i dont like being social', artist: 'luvlxckdown', album: 'Single / 2020' },
