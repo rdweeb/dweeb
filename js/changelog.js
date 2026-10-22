@@ -6,21 +6,17 @@ var Changelog = {};
 DW.changelog = Changelog;
 
 Changelog.entries = [
-  {
+    {
     pinned: true,
-    version: 'FREE TO BUILD UPON',
+    version: 'QUICK DEV NOTE',
     date: 'A note',
-    title: 'My work belongs in the hands of everyone',
+    title: 'THIS SITE IS BEING RE-CONSTRUCTED',
     items: [
-      "Everything I create and release under my name is free for you to use, copy, remix, modify, redistribute, and even sell!",
-      "You don't need to ask me for permission.",
-      "There's just one condition, give me credit. Say the work is by RDweeb, link back to [my website](https://rdweeb.xyz/) and to the license, and say if you changed anything.",
-      "If you made something cool with it, I'd love a DM! That part is just a request, not a rule.",
-      "Example credit: \"Made by RDweeb (https://rdweeb.xyz/), licensed under CC BY 4.0\"",
-      "This only covers things I made myself. If something here belongs to someone else, it stays under their terms.",
-      "Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)",
-      "Free to use. Free to change. Free for commercial use. Credit must be given.",
-      "[READ THE FULL LICENSE HERE](https://creativecommons.org/licenses/by/4.0/legalcode)"
+      "So, I have decided that I want my site to not be seperate sites but rather all be packed into one",
+      "Because of this I am working on a fully re-constructed and re-imagined site, that'll be better than this one, I promise.",
+      "And thus it will take me a few weeks or perhaps months to fully do this project of mine, so there won't be any updates to this site for now, I will make weekly dev posts here on prorgess.",
+      "And quick note, I will let you guys be able to comission my work! So yeah. Just wait for my site to be finished, okay? Cya.",
+      "You all are awesome sauce!""
     ]
   },
   {
