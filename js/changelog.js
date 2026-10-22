@@ -16,7 +16,7 @@ Changelog.entries = [
       "Because of this I am working on a fully re-constructed and re-imagined site, that'll be better than this one, I promise.",
       "And thus it will take me a few weeks or perhaps months to fully do this project of mine, so there won't be any updates to this site for now, I will make weekly dev posts here on prorgess.",
       "And quick note, I will let you guys be able to comission my work! So yeah. Just wait for my site to be finished, okay? Cya.",
-      "You all are awesome sauce!""
+      "You all are awesome sauce!"
     ]
   },
   {
